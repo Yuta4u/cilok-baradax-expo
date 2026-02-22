@@ -2,6 +2,7 @@
   "expo": {
     "name": "with-router-tailwind",
     "slug": "with-router-tailwind",
+    "scheme": "with-router-tailwind",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
