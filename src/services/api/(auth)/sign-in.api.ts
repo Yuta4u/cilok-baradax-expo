@@ -1,17 +1,27 @@
+import { ToastError } from "../../../utils/toast";
+
 export async function SignInApi({
   email,
   password,
 }: {
   email: string;
   password: string;
-}) {
-  const res = await fetch(`http://103.150.191.78:3000/api/auth/login`, {
+}): Promise<Response> {
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {
       "Content-Type": "application/json",
     },
   });
-  if (!res.ok) console.log();
-  return res.json();
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(
+      data.message || "Something went wrong, please try again letter.",
+    );
+    throw new Error(data.message);
+  }
+
+  return data;
 }

@@ -19,6 +19,7 @@ import { CilokBaradaxLogo } from "../../assets/images/cilok-baradax-logo";
 import { useAuthStore } from "../../src/utils/authStore";
 import { router } from "expo-router";
 import { useSignInMutation } from "../../src/services/queries/(auth)/sign-in.query";
+import { ToastSuccess } from "../../src/utils/toast";
 // #fff2de
 // #b34219
 
@@ -80,7 +81,15 @@ export default function SignIn() {
       password,
     };
 
-    mutate(payload);
+    mutate(payload, {
+      onSuccess: (response) => {
+        login(response.accessToken!, response.user!);
+        ToastSuccess(
+          `Successfully logged in. Welcome back ${response.user?.name || "Admin"}`,
+        );
+        router.replace("/(tabs)/dashboard");
+      },
+    });
   };
 
   const loading = isPending;
