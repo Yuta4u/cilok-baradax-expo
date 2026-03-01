@@ -6,38 +6,34 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  SafeAreaView,
   StatusBar,
   Modal,
   KeyboardAvoidingView,
   Platform,
   Alert,
-  Dimensions,
 } from "react-native";
 import { useAuthStore } from "../../src/utils/authStore";
-
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+import {
+  useAddCashFlowMutation,
+  useGetAllCashFlowQuery,
+} from "../../src/services/queries/dashboard";
+import { UseMutateFunction, useQueryClient } from "@tanstack/react-query";
+import { ToastSuccess } from "../../src/utils/toast";
+import { router } from "expo-router";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import Pagination from "../../src/components/pagination";
+import { format } from "date-fns";
+import { hasPermission } from "../../src/utils/permissions";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type TransactionType = "income" | "expense";
 
-interface Transaction {
-  id: string;
-  type: TransactionType;
-  amount: number;
-  label: string;
-  date: string; // ISO date string
-}
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 const formatRupiah = (value: number): string =>
   new Intl.NumberFormat("id-ID", {
     style: "currency",
     currency: "IDR",
     maximumFractionDigits: 0,
   }).format(value);
-
-const todayISO = (): string => new Date().toISOString().split("T")[0];
 
 const getLast7Days = (): string[] => {
   const days: string[] = [];
@@ -54,76 +50,9 @@ const shortDay = (iso: string): string => {
   return d.toLocaleDateString("id-ID", { weekday: "short" });
 };
 
-// ── Seed Data ─────────────────────────────────────────────────────────────────
-const SEED: Transaction[] = [
-  {
-    id: "1",
-    type: "income",
-    amount: 1500000,
-    label: "Gaji Harian",
-    date: getLast7Days()[0],
-  },
-  {
-    id: "2",
-    type: "expense",
-    amount: 45000,
-    label: "Makan Siang",
-    date: getLast7Days()[0],
-  },
-  {
-    id: "3",
-    type: "income",
-    amount: 250000,
-    label: "Freelance",
-    date: getLast7Days()[1],
-  },
-  {
-    id: "4",
-    type: "expense",
-    amount: 120000,
-    label: "Transport",
-    date: getLast7Days()[1],
-  },
-  {
-    id: "5",
-    type: "income",
-    amount: 800000,
-    label: "Bonus",
-    date: getLast7Days()[2],
-  },
-  {
-    id: "6",
-    type: "expense",
-    amount: 75000,
-    label: "Belanja",
-    date: getLast7Days()[3],
-  },
-  {
-    id: "7",
-    type: "income",
-    amount: 300000,
-    label: "Penjualan",
-    date: getLast7Days()[4],
-  },
-  {
-    id: "8",
-    type: "expense",
-    amount: 200000,
-    label: "Listrik",
-    date: getLast7Days()[5],
-  },
-  {
-    id: "9",
-    type: "income",
-    amount: 450000,
-    label: "Transfer Masuk",
-    date: getLast7Days()[6],
-  },
-];
-
 // ── Bar Chart Component ───────────────────────────────────────────────────────
 interface BarChartProps {
-  transactions: Transaction[];
+  transactions: CashFlow[];
 }
 
 const BarChart: React.FC<BarChartProps> = ({ transactions }) => {
@@ -132,10 +61,15 @@ const BarChart: React.FC<BarChartProps> = ({ transactions }) => {
 
   const dailyData = days.map((day) => {
     const inc = transactions
-      .filter((t) => t.type === "income" && t.date === day)
+      .filter(
+        (t) => t.type === "INCOME" && format(t.createdAt, "yyyy-MM-dd") === day,
+      )
       .reduce((s, t) => s + t.amount, 0);
     const exp = transactions
-      .filter((t) => t.type === "expense" && t.date === day)
+      .filter(
+        (t) =>
+          t.type === "EXPENSE" && format(t.createdAt, "yyyy-MM-dd") === day,
+      )
       .reduce((s, t) => s + t.amount, 0);
     return { day, inc, exp };
   });
@@ -146,7 +80,7 @@ const BarChart: React.FC<BarChartProps> = ({ transactions }) => {
     <View style={chartStyles.container}>
       <View style={chartStyles.legend}>
         <View style={chartStyles.legendItem}>
-          <View style={[chartStyles.dot]} />
+          <View style={[[chartStyles.dot], { backgroundColor: "#2cc76d" }]} />
           <Text style={chartStyles.legendText}>Pemasukan</Text>
         </View>
         <View style={chartStyles.legendItem}>
@@ -219,7 +153,7 @@ interface InputModalProps {
   visible: boolean;
   user: User | null;
   onClose: () => void;
-  onSave: (t: Transaction) => void;
+  onSave: UseMutateFunction<any, ApiError, AddCashFlow, unknown>;
 }
 
 const InputModal: React.FC<InputModalProps> = ({
@@ -228,6 +162,7 @@ const InputModal: React.FC<InputModalProps> = ({
   onSave,
   user,
 }) => {
+  const queryClient = useQueryClient();
   const [type, setType] = useState<TransactionType>("income");
   const [amount, setAmount] = useState("");
   const [label, setLabel] = useState("");
@@ -242,19 +177,25 @@ const InputModal: React.FC<InputModalProps> = ({
       Alert.alert("Label kosong", "Isi keterangan transaksi");
       return;
     }
-    console.log(type, amount, label);
 
-    // onSave({
-    //   id: Date.now().toString(),
-    //   type,
-    //   amount: num,
-    //   label: label.trim(),
-    //   date: todayISO(),
-    // });
-    // setAmount("");
-    // setLabel("");
-    // setType("income");
-    // onClose();
+    const payload = {
+      amount: num,
+      type: type.toUpperCase(),
+      note: label.trim(),
+    };
+
+    onSave(payload, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["cash-flow:all"] });
+        ToastSuccess("Successfully! Transaksi berhasil ditambahkan.");
+        onClose();
+      },
+    });
+
+    setAmount("");
+    setLabel("");
+    setType("income");
+    onClose();
   };
 
   return (
@@ -418,34 +359,29 @@ const modalStyles = StyleSheet.create({
 });
 
 // ── Transaction Item ──────────────────────────────────────────────────────────
-const TxItem: React.FC<{ tx: Transaction }> = ({ tx }) => (
+const TxItem: React.FC<{ tx: CashFlow }> = ({ tx }) => (
   <View style={txStyles.row}>
     <View
       style={[
         txStyles.icon,
-        { backgroundColor: tx.type === "income" ? "#2cc76d" : "#c7362c" },
+        { backgroundColor: tx.type === "INCOME" ? "#2cc76d" : "#c7362c" },
       ]}
     >
       <Text style={{ fontSize: 16, color: "#fff" }}>
-        {tx.type === "income" ? "↑" : "↓"}
+        {tx.type === "INCOME" ? "↑" : "↓"}
       </Text>
     </View>
     <View style={txStyles.info}>
-      <Text style={txStyles.txLabel}>{tx.label}</Text>
-      <Text style={txStyles.txDate}>
-        {new Date(tx.date + "T00:00:00").toLocaleDateString("id-ID", {
-          day: "numeric",
-          month: "short",
-        })}
-      </Text>
+      <Text style={txStyles.txLabel}>{tx.note}</Text>
+      <Text style={txStyles.txDate}>{format(tx.createdAt, "dd-MM-yyyy")}</Text>
     </View>
     <Text
       style={[
         txStyles.amount,
-        { color: tx.type === "income" ? "#2cc76d" : "#c7362c" },
+        { color: tx.type === "INCOME" ? "#2cc76d" : "#c7362c" },
       ]}
     >
-      {tx.type === "income" ? "+" : "-"}
+      {tx.type === "INCOME" ? "+" : "-"}
       {formatRupiah(tx.amount)}
     </Text>
   </View>
@@ -484,39 +420,41 @@ const txStyles = StyleSheet.create({
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { user } = useAuthStore.getState();
+  const { user, logout } = useAuthStore.getState();
 
-  const [transactions, setTransactions] = useState<Transaction[]>(SEED);
   const [modalVisible, setModalVisible] = useState(false);
-  const [activeFilter, setActiveFilter] = useState<
-    "all" | "income" | "expense"
-  >("all");
+  const [type, setType] = useState<"ALL" | "INCOME" | "EXPENSE">("ALL");
+  const [page, setPage] = useState(1);
 
-  const today = todayISO();
-  const todayIncome = transactions
-    .filter((t) => t.type === "income" && t.date === today)
-    .reduce((s, t) => s + t.amount, 0);
-  const todayExpense = transactions
-    .filter((t) => t.type === "expense" && t.date === today)
-    .reduce((s, t) => s + t.amount, 0);
-  const totalIncome = transactions
-    .filter((t) => t.type === "income")
-    .reduce((s, t) => s + t.amount, 0);
-  const totalExpense = transactions
-    .filter((t) => t.type === "expense")
-    .reduce((s, t) => s + t.amount, 0);
+  const { mutate } = useAddCashFlowMutation();
+  const {
+    data,
+  }: {
+    data: {
+      data: CashFlow[];
+      totalIncome: number;
+      totalExpense: number;
+      todayIncome: number;
+      todayExpense: number;
+      metadata: Metadata;
+    };
+  } = useGetAllCashFlowQuery({
+    page,
+    type,
+  }) as any;
 
-  const filtered = [...transactions]
-    .filter((t) => activeFilter === "all" || t.type === activeFilter)
-    .sort((a, b) => b.date.localeCompare(a.date))
-    .slice(0, 15);
-
-  const addTransaction = useCallback((t: Transaction) => {
-    setTransactions((prev) => [t, ...prev]);
+  const handleLogout = useCallback(() => {
+    logout();
+    router.replace("/sign-in");
+    ToastSuccess("Successfully logged out.");
   }, []);
 
+  const authorized =
+    hasPermission(user!.permission, "SUPER_USER") ||
+    hasPermission(user!.permission, "ADMIN");
+
   return (
-    <SafeAreaView style={styles.safe}>
+    <View style={styles.safe}>
       <StatusBar barStyle="light-content" backgroundColor="#070E1A" />
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -534,65 +472,71 @@ export default function Dashboard() {
               })}
             </Text>
           </View>
-          <TouchableOpacity
-            style={styles.addBtn}
-            onPress={() => setModalVisible(true)}
-          >
-            <Text style={styles.addBtnText}>+ Tambah</Text>
-          </TouchableOpacity>
+          <View style={{ display: "flex", flexDirection: "row", gap: 6 }}>
+            <TouchableOpacity
+              style={styles.addBtn}
+              onPress={() => setModalVisible(true)}
+            >
+              <Text style={styles.addBtnText}>+ Tambah</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
+              <MaterialIcons name="logout" size={17} color="white" />
+            </TouchableOpacity>
+          </View>
         </View>
 
-        {/* Balance Card */}
-        <View style={styles.balanceCard}>
-          <Text style={styles.balanceLabel}>SALDO BERSIH</Text>
-          <Text
-            style={[
-              styles.balanceAmount,
-              {
-                color: totalIncome - totalExpense >= 0 ? "#2cc76d" : "#c7362c",
-              },
-            ]}
-          >
-            {formatRupiah(totalIncome - totalExpense)}
-          </Text>
-          <View style={styles.balanceRow}>
-            <View style={styles.balanceSub}>
-              <Text style={styles.balanceSubLabel}>↑ Total Masuk</Text>
-              <Text style={[styles.balanceSubVal, { color: "#2cc76d" }]}>
-                {formatRupiah(totalIncome)}
+        {authorized && (
+          <View>
+            <View style={styles.balanceCard}>
+              <Text style={styles.balanceLabel}>SALDO BERSIH</Text>
+              <Text
+                style={[
+                  styles.balanceAmount,
+                  {
+                    color: false ? "#2cc76d" : "#c7362c",
+                  },
+                ]}
+              >
+                {formatRupiah(data?.totalIncome - data?.totalExpense || 0)}
               </Text>
+              <View style={styles.balanceRow}>
+                <View style={styles.balanceSub}>
+                  <Text style={styles.balanceSubLabel}>↑ Total Masuk</Text>
+                  <Text style={[styles.balanceSubVal, { color: "#2cc76d" }]}>
+                    {formatRupiah(data?.totalIncome || 0)}
+                  </Text>
+                </View>
+                <View style={styles.divider} />
+                <View style={styles.balanceSub}>
+                  <Text style={styles.balanceSubLabel}>↓ Total Keluar</Text>
+                  <Text style={[styles.balanceSubVal, { color: "#c7362c" }]}>
+                    {formatRupiah(data?.totalExpense || 0)}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <View style={styles.divider} />
-            <View style={styles.balanceSub}>
-              <Text style={styles.balanceSubLabel}>↓ Total Keluar</Text>
-              <Text style={[styles.balanceSubVal, { color: "#c7362c" }]}>
-                {formatRupiah(totalExpense)}
-              </Text>
+
+            <View style={styles.todayRow}>
+              <View style={[styles.todayCard]}>
+                <Text style={styles.todayCardLabel}>Pemasukan Hari Ini</Text>
+                <Text style={[styles.todayCardAmt, { color: "#2cc76d" }]}>
+                  {formatRupiah(data?.todayIncome || 0)}
+                </Text>
+              </View>
+              <View style={[styles.todayCard]}>
+                <Text style={styles.todayCardLabel}>Pengeluaran Hari Ini</Text>
+                <Text style={[styles.todayCardAmt, { color: "#c7362c" }]}>
+                  {formatRupiah(data?.todayExpense || 0)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>7 Hari Terakhir</Text>
+              <BarChart transactions={data?.data || []} />
             </View>
           </View>
-        </View>
-
-        {/* Today Summary */}
-        <View style={styles.todayRow}>
-          <View style={[styles.todayCard]}>
-            <Text style={styles.todayCardLabel}>Pemasukan Hari Ini</Text>
-            <Text style={[styles.todayCardAmt, { color: "#2cc76d" }]}>
-              {formatRupiah(todayIncome)}
-            </Text>
-          </View>
-          <View style={[styles.todayCard]}>
-            <Text style={styles.todayCardLabel}>Pengeluaran Hari Ini</Text>
-            <Text style={[styles.todayCardAmt, { color: "#c7362c" }]}>
-              {formatRupiah(todayExpense)}
-            </Text>
-          </View>
-        </View>
-
-        {/* Chart */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>7 Hari Terakhir</Text>
-          <BarChart transactions={transactions} />
-        </View>
+        )}
 
         {/* Transaction List */}
         <View style={styles.card}>
@@ -600,31 +544,30 @@ export default function Dashboard() {
 
           {/* Filter Tabs */}
           <View style={styles.filterRow}>
-            {(["all", "income", "expense"] as const).map((f) => (
+            {(["ALL", "INCOME", "EXPENSE"] as const).map((f) => (
               <TouchableOpacity
                 key={f}
-                style={[
-                  styles.filterBtn,
-                  activeFilter === f && styles.filterBtnActive,
-                ]}
-                onPress={() => setActiveFilter(f)}
+                style={[styles.filterBtn, type === f && styles.filterBtnActive]}
+                onPress={() => setType(f)}
               >
                 <Text
                   style={[
                     styles.filterText,
-                    activeFilter === f && styles.filterTextActive,
+                    type === f && styles.filterTextActive,
                   ]}
                 >
-                  {f === "all" ? "Semua" : f === "income" ? "Masuk" : "Keluar"}
+                  {f === "ALL" ? "Semua" : f === "INCOME" ? "Masuk" : "Keluar"}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
 
-          {filtered.length === 0 ? (
-            <Text style={styles.emptyText}>Belum ada transaksi</Text>
-          ) : (
-            filtered.map((t) => <TxItem key={t.id} tx={t} />)
+          {data && data.data.map((cf: any) => <TxItem key={cf.id} tx={cf} />)}
+          {data && (
+            <Pagination
+              metadata={data?.metadata}
+              onPageChange={(page: number) => setPage(page)}
+            />
           )}
         </View>
       </ScrollView>
@@ -632,10 +575,10 @@ export default function Dashboard() {
       <InputModal
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
-        onSave={addTransaction}
+        onSave={mutate}
         user={user}
       />
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -667,7 +610,14 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 12,
   },
+  logoutBtn: {
+    backgroundColor: "#d93232",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
   addBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  logoutBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
 
   balanceCard: {
     backgroundColor: "#c75d2c4d",

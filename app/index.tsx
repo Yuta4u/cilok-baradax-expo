@@ -4,10 +4,11 @@ import { useAuthStore } from "../src/utils/authStore";
 import { useProfileQuery } from "../src/services/queries/(auth)/profile.query";
 
 export default function Index() {
-  const { isLoggedIn } = useAuthStore();
+  const { isLoggedIn, accessToken } = useAuthStore();
   const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
-  // Tunggu zustand selesai load dari AsyncStorage
+  const { data } = useProfileQuery(accessToken);
+
   if (!_hasHydrated) {
     return (
       <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -16,7 +17,7 @@ export default function Index() {
     );
   }
 
-  if (isLoggedIn) {
+  if (isLoggedIn && data) {
     return <Redirect href="/(tabs)/dashboard" />;
   }
 

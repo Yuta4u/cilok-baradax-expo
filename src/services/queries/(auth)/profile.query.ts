@@ -1,25 +1,24 @@
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { API_URL_DEV } from "../../../../constant";
-import { Redirect } from "expo-router";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 
-export const useProfileQuery = (token: string | null) => {
-  const query = useSuspenseQuery({
-    queryKey: ["auth:profile"],
+export const useProfileQuery = (accessToken: string | null) => {
+  return useQuery({
+    queryKey: ["auth:profile", accessToken],
     queryFn: async () => {
-      const [ok, response] = (await fetch(`${API_URL_DEV}/api/auth/profile`, {
-        method: "GET",
+      const res = await fetch(`${API_URL_DEV}/auth/profile`, {
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
-      }).then((res) => [res.ok, res.json()])) as any;
+      });
 
-      return response;
+      if (!res.ok) {
+        throw new Error("Unauthorized");
+      }
+
+      return res.json();
     },
-    refetchInterval: 60 * 1000,
-    retry: false,
+    refetchInterval: 5000,
+    refetchIntervalInBackground: true,
+    enabled: !!accessToken,
   });
-
-  return query;
 };

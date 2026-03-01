@@ -1,8 +1,16 @@
 import { Tabs } from "expo-router";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useAuthStore } from "../../src/utils/authStore";
+import { hasPermission } from "../../src/utils/permissions";
 
 export default function TabLayout() {
+  const { user } = useAuthStore.getState();
+
+  const authorized =
+    hasPermission(user!.permission, "SUPER_USER") ||
+    hasPermission(user!.permission, "ADMIN");
+
   return (
     <Tabs
       screenOptions={{
@@ -28,6 +36,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"file-tray-sharp"} color={color} size={24} />
           ),
+          href: authorized ? "/inventory" : "/(tabs)/dashboard",
         }}
       />
       <Tabs.Screen
@@ -36,6 +45,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"home-sharp"} color={color} size={24} />
           ),
+          href: authorized ? "/user" : "/(tabs)/dashboard",
         }}
       />
     </Tabs>

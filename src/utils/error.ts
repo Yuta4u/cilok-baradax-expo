@@ -6,8 +6,6 @@ export const UnauthorizedError = () => {
 };
 
 export function handleError(res: ApiError) {
-  console.log(res, "test");
-
   if (res?.error && typeof res?.error !== "string") {
     res.error.forEach((obj) => {
       const arrOfError = Object.values(obj.constraints);

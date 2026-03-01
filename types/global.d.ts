@@ -18,11 +18,24 @@ interface User {
   active: boolean;
 }
 
+interface Metadata {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+}
+
 interface AddUser {
   name: string;
   email: string;
   password: string;
   permission: string[];
+}
+
+interface AddCashFlow {
+  type: string;
+  amount: number;
+  note: string;
 }
 
 type ApiError = {
@@ -38,6 +51,22 @@ type ApiError = {
     email: string;
   }[];
 };
+
+interface BaseParams {
+  page?: number;
+  limit?: number;
+  q?: string;
+  type?: string;
+}
+
+interface CashFlow {
+  id: string;
+  createdAt: string;
+  amount: number;
+  type: string;
+  note: string;
+  name: string;
+}
 
 type BaseResponse = {
   message: string;
