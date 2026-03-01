@@ -1,0 +1,51 @@
+{
+  "cli": {
+    "appVersionSource": "remote"
+  },
+  "build": {
+    "base": {
+      "node": "22.0.0",
+      "ios": {
+        "image": "auto",
+        "resourceClass": "m-medium"
+      },
+      "android": {
+        "image": "auto"
+      },
+      "channel": "base",
+      "env": {
+        "EXPO_PUBLIC_API_URL": "http://103.150.191.78:3000/api"
+      }
+    },
+    "development": {
+      "environment": "development",
+      "extends": "base",
+      "channel": "development",
+      "distribution": "internal",
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Debug"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      }
+    },
+    "production": {
+      "extends": "base",
+      "channel": "production",
+      "environment": "production",
+      "ios": {
+        "simulator": true,
+        "buildConfiguration": "Release"
+      },
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}
