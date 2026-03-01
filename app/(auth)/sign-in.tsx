@@ -20,8 +20,17 @@ import { useAuthStore } from "../../src/utils/authStore";
 import { router } from "expo-router";
 import { useSignInMutation } from "../../src/services/queries/(auth)/sign-in.query";
 import { ToastSuccess } from "../../src/utils/toast";
+import { API_URL_DEV } from "../../constant";
 // #fff2de
 // #b34219
+
+// color pallate
+// #F3E9DC
+// #D96F32
+// #C75D2C
+// #F8B259
+// #c75d2c4d
+// #f8b359a9 bg
 
 const { width, height } = Dimensions.get("window");
 
@@ -87,6 +96,7 @@ export default function SignIn() {
         ToastSuccess(
           `Successfully logged in. Welcome back ${response.user?.name || "Admin"}`,
         );
+
         router.replace("/(tabs)/dashboard");
       },
     });

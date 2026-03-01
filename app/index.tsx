@@ -1,9 +1,10 @@
 import { Redirect } from "expo-router";
 import { View, ActivityIndicator } from "react-native";
 import { useAuthStore } from "../src/utils/authStore";
+import { useProfileQuery } from "../src/services/queries/(auth)/profile.query";
 
 export default function Index() {
-  const isLoggedIn = useAuthStore((state) => state.isLoggedIn);
+  const { isLoggedIn } = useAuthStore();
   const _hasHydrated = useAuthStore((state) => state._hasHydrated);
 
   // Tunggu zustand selesai load dari AsyncStorage

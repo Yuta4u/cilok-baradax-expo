@@ -28,10 +28,14 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
     "extra": {
       "eas": {
-        "projectId": "ed17fa60-252c-4873-aa74-5ad4206e799a"
+        "projectId": "9923a165-71fd-4870-b1e5-40426c451ade"
       }
-    }
+    },
+    "owner": "yutadeve"
   }
 }
