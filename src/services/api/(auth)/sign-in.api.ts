@@ -8,7 +8,7 @@ export async function SignInApi({
   email: string;
   password: string;
 }): Promise<Response> {
-  const res = await fetch(`${API_URL_DEV}/auth/login`, {
+  const res = await fetch(`http://192.168.1.4:3000/api/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {

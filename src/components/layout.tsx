@@ -2,16 +2,17 @@ import { StyleSheet, Text, View } from "react-native";
 
 interface Props {
   title: string;
+  sub?: string;
   children: React.ReactNode;
 }
 
-export default function PageLayout({ title, children }: Props) {
+export default function PageLayout({ title, sub, children }: Props) {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <View>
           <Text style={styles.headerTitle}>{title}</Text>
-          <Text style={styles.headerSub}>Sub Title</Text>
+          <Text style={styles.headerSub}>{sub || ""}</Text>
         </View>
       </View>
       <View style={styles.containerAdds}>{children}</View>

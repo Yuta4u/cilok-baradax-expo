@@ -5,7 +5,7 @@ import { ToastError } from "../../../utils/toast";
 export async function addCashFlow(payload: AddCashFlow) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`${API_URL_DEV}/cash-flow`, {
+  const res = await fetch(`http://192.168.1.4:3000/api/cash-flow`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -28,7 +28,7 @@ export async function getAllCashFlowApi(payload: BaseParams) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `${API_URL_DEV}/cash-flow?page=${payload.page}&limit=10&type=${payload.type}`,
+    `http://192.168.1.4:3000/api/cash-flow?page=${payload.page}&limit=10&type=${payload.type}`,
     {
       method: "GET",
       headers: {

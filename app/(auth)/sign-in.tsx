@@ -142,7 +142,7 @@ export default function SignIn() {
           </Animated.View>
 
           {/* Heading */}
-          <Text style={styles.welcomeText}>Cilok Baradax</Text>
+          {/* <Text style={styles.welcomeText}>Cilok Baradax</Text> */}
 
           {/* Form */}
           <View style={styles.form}>

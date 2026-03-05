@@ -18,6 +18,25 @@ interface User {
   active: boolean;
 }
 
+class UpdateStockIngredient {
+  id: string;
+  quantity: number;
+  type: number;
+}
+
+interface Ingredient {
+  createdAt: string;
+  deletedAt?: string;
+  name: string;
+  icon: string;
+  id: string;
+  uom: string;
+  minimalStock: string;
+  price: number;
+  stock: string;
+  updatedAt: string;
+}
+
 interface Metadata {
   page: number;
   limit: number;
@@ -36,6 +55,19 @@ interface AddCashFlow {
   type: string;
   amount: number;
   note: string;
+}
+
+interface AddIngredient {
+  name: string;
+  uom: string;
+  price: number;
+  icon: string;
+}
+
+interface AddProduct {
+  name: string;
+  uom: string;
+  icon: string;
 }
 
 type ApiError = {

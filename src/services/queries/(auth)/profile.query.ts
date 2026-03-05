@@ -5,7 +5,7 @@ export const useProfileQuery = (accessToken: string | null) => {
   return useQuery({
     queryKey: ["auth:profile", accessToken],
     queryFn: async () => {
-      const res = await fetch(`${API_URL_DEV}/auth/profile`, {
+      const res = await fetch(`http://192.168.1.4:3000/api/auth/profile`, {
         headers: {
           Authorization: `Bearer ${accessToken}`,
         },

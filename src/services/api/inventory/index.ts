@@ -1,38 +1,9 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { API_URL_DEV } from "../../../../constant";
-import { ToastError } from "../../../utils/toast";
 import { useAuthStore } from "../../../utils/authStore";
+import { ToastError } from "../../../utils/toast";
 
-export async function SignInApi({
-  email,
-  password,
-}: {
-  email: string;
-  password: string;
-}): Promise<Response> {
-  const res = await fetch(`http://192.168.1.4:3000/api/auth/login`, {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
-  const data = await res.json();
-
-  if (!res.ok) {
-    ToastError(
-      data.message || "Something went wrong, please try again letter.",
-    );
-    throw new Error(data.message);
-  }
-
-  return data;
-}
-
-export async function getAllUserApi() {
+export async function getAllIngredientApi(q: string) {
   const { accessToken } = useAuthStore.getState();
-
-  const res = await fetch(`http://192.168.1.4:3000/api/user/all`, {
+  const res = await fetch(`http://192.168.1.4:3000/api/ingredient?q=${q}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -50,10 +21,30 @@ export async function getAllUserApi() {
   return data;
 }
 
-export async function addUserApi(payload: AddUser) {
+export async function getAllProductApi(q: string) {
+  const { accessToken } = useAuthStore.getState();
+  const res = await fetch(`http://192.168.1.4:3000/api/product?q=${q}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
+export async function AddIngredientApi(payload: AddIngredient) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://192.168.1.4:3000/api/user`, {
+  const res = await fetch(`http://192.168.1.4:3000/api/ingredient`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -72,18 +63,40 @@ export async function addUserApi(payload: AddUser) {
   return data;
 }
 
-export async function setActiveApi(payload: { id: string; active: number }) {
+export async function AddProductApi(payload: AddProduct) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(`http://192.168.1.4:3000/api/product`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
+export async function updateStockIngredientApi(payload: UpdateStockIngredient) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://192.168.1.4:3000/api/user/active/${payload.id}`,
+    `http://192.168.1.4:3000/api/ingredient/${payload.id}`,
     {
-      method: "POST",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
-      body: JSON.stringify({ active: payload.active }),
+      body: JSON.stringify(payload),
     },
   );
 
