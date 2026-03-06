@@ -51,7 +51,7 @@ export function AddStockModal({ visible, onClose }: Props) {
         <View style={styles.modal}>
           <Text style={styles.modalTitle}>Stock In</Text>
 
-          <Text style={styles.label}>Price</Text>
+          <Text style={styles.label}>Quantity</Text>
           <TextInput
             style={styles.input}
             placeholder="..."
@@ -85,8 +85,8 @@ export function AddStockModalBtn({ id }: { id: string }) {
   const { toggleAddStockModal } = useInventoryStore();
   return (
     <Button
-      textStyle={{ fontSize: 12 }}
-      text="Stock In"
+      textStyle={{ fontSize: 14 }}
+      text="+ Stock In"
       onPress={() => toggleAddStockModal(id)}
     />
   );

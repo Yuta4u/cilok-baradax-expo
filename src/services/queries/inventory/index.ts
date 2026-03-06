@@ -4,7 +4,9 @@ import {
   AddProductApi,
   getAllIngredientApi,
   getAllProductApi,
+  updateMinimalStockIngredientApi,
   updateStockIngredientApi,
+  updateStockProductApi,
 } from "../../api/inventory";
 import { handleError } from "../../../utils/error";
 
@@ -43,6 +45,20 @@ export const useAddProductMutation = () => {
 export const useUpdateStockIngredientMutation = () => {
   return useMutation({
     mutationFn: updateStockIngredientApi,
+    onError: handleError,
+  });
+};
+
+export const useUpdateStockProductMutation = () => {
+  return useMutation({
+    mutationFn: updateStockProductApi,
+    onError: handleError,
+  });
+};
+
+export const useUpdateMinimalStockIngredientMutation = () => {
+  return useMutation({
+    mutationFn: updateMinimalStockIngredientApi,
     onError: handleError,
   });
 };

@@ -2,7 +2,10 @@ import { useState, useCallback } from "react";
 import { Modal, View, Text, TextInput, StyleSheet } from "react-native";
 import Button from "../button";
 import { useInventoryStore } from "../../store/inventory.store";
-import { useUpdateStockIngredientMutation } from "../../services/queries/inventory";
+import {
+  useUpdateStockIngredientMutation,
+  useUpdateStockProductMutation,
+} from "../../services/queries/inventory";
 import { ToastSuccess } from "../../utils/toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -11,13 +14,13 @@ interface Props {
   onClose: () => void;
 }
 
-export function SubtractStockModal({ visible, onClose }: Props) {
+export function StockOutProductModal({ visible, onClose }: Props) {
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState("");
 
-  const { subtractStockId: id } = useInventoryStore();
+  const { stockOutProductId: id } = useInventoryStore();
 
-  const { mutate, isPending } = useUpdateStockIngredientMutation();
+  const { mutate, isPending } = useUpdateStockProductMutation();
 
   const handleOnReset = useCallback(() => {
     setQuantity("");
@@ -35,14 +38,14 @@ export function SubtractStockModal({ visible, onClose }: Props) {
       onSuccess: ({ message }) => {
         ToastSuccess(message);
         handleOnReset();
-        queryClient.invalidateQueries({ queryKey: ["ingredient:all"] });
+        queryClient.invalidateQueries({ queryKey: ["product:all"] });
       },
     });
   };
 
   return (
     <Modal
-      key={"add-stock-modal"}
+      key={"stock-out-product-modal"}
       visible={visible}
       animationType="slide"
       transparent
@@ -81,14 +84,14 @@ export function SubtractStockModal({ visible, onClose }: Props) {
   );
 }
 
-export function SubtractStockModalBtn({ id }: { id: string }) {
-  const { toggleSubtractStockModal } = useInventoryStore();
+export function StockOutProductModalBtn({ id }: { id: string }) {
+  const { toggleStockOutProductModal } = useInventoryStore();
   return (
     <Button
       style={{ backgroundColor: "#F8B259" }}
       textStyle={{ fontSize: 14 }}
       text="- Stock Out"
-      onPress={() => toggleSubtractStockModal(id)}
+      onPress={() => toggleStockOutProductModal(id)}
     />
   );
 }

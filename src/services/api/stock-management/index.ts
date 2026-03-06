@@ -1,17 +1,14 @@
-import { API_URL_DEV } from "../../../../constant";
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
 
-export async function addCashFlow(payload: AddCashFlow) {
+export async function getAllKaryawanApi() {
   const { accessToken } = useAuthStore.getState();
-
-  const res = await fetch(`http://192.168.60.107:3000/api/cash-flow`, {
-    method: "POST",
+  const res = await fetch(`http://192.168.60.107:3000/api/user/karyawan`, {
+    method: "GET",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify(payload),
   });
 
   const data = await res.json();
@@ -24,17 +21,20 @@ export async function addCashFlow(payload: AddCashFlow) {
   return data;
 }
 
-export async function getAllCashFlowApi(payload: BaseParams) {
+export async function updateStockCilokApi(payload: UpdateStockCilok) {
   const { accessToken } = useAuthStore.getState();
 
+  console.log(payload, "test");
+
   const res = await fetch(
-    `http://192.168.60.107:3000/api/cash-flow?page=${payload.page}&limit=10&type=${payload.type}`,
+    `http://192.168.60.107:3000/api/user/stock-cilok/${payload.id}`,
     {
-      method: "GET",
+      method: "PUT",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${accessToken}`,
       },
+      body: JSON.stringify({ quantity: payload.quantity }),
     },
   );
 
@@ -44,5 +44,6 @@ export async function getAllCashFlowApi(payload: BaseParams) {
     ToastError(data.message || "Something went wrong, please try again later.");
     throw new Error(data.message);
   }
+
   return data;
 }

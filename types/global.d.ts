@@ -15,13 +15,46 @@ interface User {
   email: string;
   password: string;
   permission: number;
+  stockCilok: number;
   active: boolean;
+}
+
+interface UpdateStockCilok {
+  id: string;
+  quantity: string;
+}
+
+class UpdateStockCilok {
+  id: string;
+  quantity: number;
 }
 
 class UpdateStockIngredient {
   id: string;
   quantity: number;
   type: number;
+}
+
+class UpdateStockProduct {
+  id: string;
+  quantity: number;
+  type: number;
+}
+
+class UpdateMinimalStockIngredient {
+  id: string;
+  minimalStock: number;
+}
+
+interface Product {
+  createdAt: string;
+  deletedAt?: string;
+  name: string;
+  icon: string;
+  id: string;
+  uom: string;
+  stock: string;
+  updatedAt: string;
 }
 
 interface Ingredient {

@@ -26,6 +26,10 @@ import {
   AddProductModalBtn,
 } from "../../src/components/modal/add-product.modal";
 import debounce from "lodash/debounce";
+import { EditMinimalStockModal } from "../../src/components/modal/edit-minimal-stock.modal";
+import ProductCard from "../../src/components/card/product.card";
+import { StockInProductModal } from "../../src/components/modal/stock-in-product.modal";
+import { StockOutProductModal } from "../../src/components/modal/stock-out-product.modal";
 
 const FILTERS = [
   { key: "ingredient", label: "Ingredient" },
@@ -52,11 +56,17 @@ export default function InventoryScreen({ navigation }: any) {
     addIngredientModal,
     addProductModal,
     addStockModal,
+    stockInProductModal,
+    stockOutProductModal,
     subtractStockModal,
+    editMinimalStockModal,
     toggleAddIngredientModal,
     toggleAddProductModal,
     toggleAddStockModal,
     toggleSubtractStockModal,
+    toggleEditMinimalStockModal,
+    toggleStockInProductModal,
+    toggleStockOutProductModal,
   } = useInventoryStore();
   const {
     data: ingredients,
@@ -79,7 +89,6 @@ export default function InventoryScreen({ navigation }: any) {
     if (filter === "product") setData(products || []);
   }, [filter, ingredients, products]);
 
-  // ✅ Tambahkan ini untuk mencegah memory leak
   useEffect(() => {
     return () => handleSearch.cancel();
   }, [handleSearch]);
@@ -143,7 +152,13 @@ export default function InventoryScreen({ navigation }: any) {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => <InventoryCard item={item} />}
+        renderItem={({ item }) =>
+          filter === "ingredient" ? (
+            <InventoryCard item={item} />
+          ) : (
+            <ProductCard item={item} />
+          )
+        }
         ListEmptyComponent={
           loading ? (
             <View style={styles.emptyWrap}>
@@ -165,21 +180,50 @@ export default function InventoryScreen({ navigation }: any) {
         <Text style={styles.fabText}>+</Text>
       </TouchableOpacity>
 
+      {/* add ingredient  */}
       {addIngredientModal && (
         <AddIngredientModal
           visible={addIngredientModal}
           onClose={toggleAddIngredientModal}
         />
       )}
+
+      {/* add product  */}
       {addProductModal && (
         <AddProductModal
           visible={addProductModal}
           onClose={toggleAddProductModal}
         />
       )}
+
+      {stockInProductModal && (
+        <StockInProductModal
+          visible={stockInProductModal}
+          onClose={toggleStockInProductModal}
+        />
+      )}
+
+      {stockOutProductModal && (
+        <StockOutProductModal
+          visible={stockOutProductModal}
+          onClose={toggleStockOutProductModal}
+        />
+      )}
+
+      {/* edit minimal stock */}
+      {editMinimalStockModal && (
+        <EditMinimalStockModal
+          visible={editMinimalStockModal}
+          onClose={toggleEditMinimalStockModal}
+        />
+      )}
+
+      {/* add stock  */}
       {addStockModal && (
         <AddStockModal visible={addStockModal} onClose={toggleAddStockModal} />
       )}
+
+      {/* subtract stock  */}
       {subtractStockModal && (
         <SubtractStockModal
           visible={subtractStockModal}

@@ -19,15 +19,18 @@ import {
 import { enumeratePermission } from "../../src/utils/permissions";
 import { Picker } from "@react-native-picker/picker";
 import { ToastSuccess } from "../../src/utils/toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function User() {
   const [modalVisible, setModalVisible] = useState(false);
-  const [filter, setFilter] = useState<"all" | "active" | "inactive">("all");
+  const [filter, setFilter] = useState<"active" | "inactive">("active");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [permission, setPermission] = useState("");
   const [password, setPassword] = useState("");
   const pickerRef = useRef(null);
+
+  const queryClient = useQueryClient();
 
   const {
     data,
@@ -86,9 +89,10 @@ export default function User() {
 
   const handleSetActiveUser = (user: User) => {
     setActive(
-      { id: user.id, active: user.active ? 1 : 0 },
+      { id: user.id, active: user.deletedAt ? 1 : 0 },
       {
         onSuccess: ({ message }) => {
+          queryClient.invalidateQueries({ queryKey: ["karyawan:all"] });
           ToastSuccess(message);
           refetch();
         },
@@ -99,15 +103,15 @@ export default function User() {
   const users: User[] | [] = data?.data || [];
 
   const filteredUsers = users.filter((u) => {
-    if (filter === "active") return u.active;
-    if (filter === "inactive") return !u.active;
+    if (filter === "active") return !u.deletedAt;
+    if (filter === "inactive") return u.deletedAt;
     return true;
   });
 
   const confirmToggle = (user: User) => {
     Alert.alert(
-      user.active ? "Nonaktifkan User" : "Aktifkan User",
-      `${user.active ? "Nonaktifkan" : "Aktifkan"} ${user.name}?`,
+      user.deletedAt ? "Nonaktifkan User" : "Aktifkan User",
+      `${user.deletedAt ? "Nonaktifkan" : "Aktifkan"} ${user.name}?`,
       [
         { text: "Batal", style: "cancel" },
         {
@@ -141,12 +145,12 @@ export default function User() {
         <TouchableOpacity
           style={[
             styles.statusBtn,
-            item.active ? styles.activeBtn : styles.inactiveBtn,
+            !item.deletedAt ? styles.activeBtn : styles.inactiveBtn,
           ]}
           onPress={() => confirmToggle(item)}
         >
           <Text style={styles.statusBtnText}>
-            {item.active ? "Aktif" : "Nonaktif"}
+            {item?.deletedAt ? "Nonaktif" : "Aktif"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -167,7 +171,7 @@ export default function User() {
       </View>
       {/* Filter Tabs */}
       <View style={styles.filterRow}>
-        {(["all", "active", "inactive"] as const).map((f) => (
+        {(["active", "inactive"] as const).map((f) => (
           <TouchableOpacity
             key={f}
             style={[styles.filterTab, filter === f && styles.filterTabActive]}
@@ -179,7 +183,7 @@ export default function User() {
                 filter === f && styles.filterTextActive,
               ]}
             >
-              {f === "all" ? "Semua" : f === "active" ? "Aktif" : "Nonaktif"}
+              {f === "active" ? "Aktif" : "Nonaktif"}
             </Text>
           </TouchableOpacity>
         ))}
@@ -189,13 +193,13 @@ export default function User() {
       <View style={styles.statsRow}>
         <View style={styles.statCard}>
           <Text style={[styles.statNum, { color: "#2cc76d" }]}>
-            {users.filter((u) => u.active)?.length || 0}
+            {users.filter((u) => !u.deletedAt)?.length || 0}
           </Text>
           <Text style={styles.statLabel}>Aktif</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={[styles.statNum, { color: "#c7362c" }]}>
-            {users.filter((u) => !u.active)?.length || 0}
+            {users.filter((u) => u.deletedAt)?.length || 0}
           </Text>
           <Text style={styles.statLabel}>Nonaktif</Text>
         </View>

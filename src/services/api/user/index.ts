@@ -10,7 +10,7 @@ export async function SignInApi({
   email: string;
   password: string;
 }): Promise<Response> {
-  const res = await fetch(`http://192.168.1.4:3000/api/auth/login`, {
+  const res = await fetch(`http://192.168.60.107:3000/api/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {
@@ -32,7 +32,7 @@ export async function SignInApi({
 export async function getAllUserApi() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://192.168.1.4:3000/api/user/all`, {
+  const res = await fetch(`http://192.168.60.107:3000/api/user/all`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +53,7 @@ export async function getAllUserApi() {
 export async function addUserApi(payload: AddUser) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://192.168.1.4:3000/api/user`, {
+  const res = await fetch(`http://192.168.60.107:3000/api/user`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -76,7 +76,7 @@ export async function setActiveApi(payload: { id: string; active: number }) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://192.168.1.4:3000/api/user/active/${payload.id}`,
+    `http://192.168.60.107:3000/api/user/active/${payload.id}`,
     {
       method: "POST",
       headers: {

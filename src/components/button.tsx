@@ -1,4 +1,4 @@
-import { CSSProperties } from "react";
+import { CSSProperties, JSX } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -9,6 +9,7 @@ import {
 interface Props {
   text: string;
   loading?: boolean;
+  icon?: JSX.Element;
   key?: string;
   style?: CSSProperties;
   textStyle?: CSSProperties;
@@ -17,6 +18,7 @@ interface Props {
 
 export default function Button({
   text,
+  icon,
   loading = false,
   style,
   textStyle,
@@ -31,7 +33,10 @@ export default function Button({
       {loading ? (
         <ActivityIndicator color="#fff2de" size="small" />
       ) : (
-        <Text style={[styles.buttonText, textStyle as never]}>{text}</Text>
+        <Text style={[styles.buttonText, textStyle as never]}>
+          {icon}
+          {text}
+        </Text>
       )}
     </TouchableOpacity>
   );

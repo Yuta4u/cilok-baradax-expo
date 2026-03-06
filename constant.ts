@@ -1,4 +1,4 @@
-export const API_URL_PROD = "http://192.168.1.4:3000/api";
+export const API_URL_PROD = "http://192.168.60.107:3000/api";
 export const API_URL_DEV = "http://10.0.2.2:3000/api";
 
 // style

@@ -2,33 +2,36 @@ import { useState, useCallback } from "react";
 import { Modal, View, Text, TextInput, StyleSheet } from "react-native";
 import Button from "../button";
 import { useInventoryStore } from "../../store/inventory.store";
-import { useUpdateStockIngredientMutation } from "../../services/queries/inventory";
+import {
+  useUpdateMinimalStockIngredientMutation,
+  useUpdateStockIngredientMutation,
+} from "../../services/queries/inventory";
 import { ToastSuccess } from "../../utils/toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { Feather } from "@expo/vector-icons";
 
 interface Props {
   visible: boolean;
   onClose: () => void;
 }
 
-export function SubtractStockModal({ visible, onClose }: Props) {
+export function EditMinimalStockModal({ visible, onClose }: Props) {
   const queryClient = useQueryClient();
-  const [quantity, setQuantity] = useState("");
+  const [minimalStock, setMinimalStock] = useState("");
 
-  const { subtractStockId: id } = useInventoryStore();
+  const { editMinimalStockId: id } = useInventoryStore();
 
-  const { mutate, isPending } = useUpdateStockIngredientMutation();
+  const { mutate, isPending } = useUpdateMinimalStockIngredientMutation();
 
   const handleOnReset = useCallback(() => {
-    setQuantity("");
+    setMinimalStock("");
     onClose();
   }, []);
 
   const handleOnSubmit = () => {
     const payload = {
       id,
-      type: 0,
-      quantity: Number(quantity),
+      minimalStock: Number(minimalStock),
     };
 
     mutate(payload, {
@@ -42,22 +45,22 @@ export function SubtractStockModal({ visible, onClose }: Props) {
 
   return (
     <Modal
-      key={"add-stock-modal"}
+      key={"edit-minimalstock-modal"}
       visible={visible}
       animationType="slide"
       transparent
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <Text style={styles.modalTitle}>Stock Out</Text>
+          <Text style={styles.modalTitle}>Edit Minimal Stock</Text>
 
-          <Text style={styles.label}>Quantity</Text>
+          <Text style={styles.label}>Minimal Stock</Text>
           <TextInput
             style={styles.input}
             placeholder="..."
             placeholderTextColor="#64748B"
-            value={quantity}
-            onChangeText={setQuantity}
+            value={minimalStock}
+            onChangeText={setMinimalStock}
           />
 
           <View style={styles.modalActions}>
@@ -81,14 +84,18 @@ export function SubtractStockModal({ visible, onClose }: Props) {
   );
 }
 
-export function SubtractStockModalBtn({ id }: { id: string }) {
-  const { toggleSubtractStockModal } = useInventoryStore();
+export function EditMinimalStockModalBtn({ id }: { id: string }) {
+  const { toggleEditMinimalStockModal } = useInventoryStore();
   return (
     <Button
-      style={{ backgroundColor: "#F8B259" }}
-      textStyle={{ fontSize: 14 }}
-      text="- Stock Out"
-      onPress={() => toggleSubtractStockModal(id)}
+      text=""
+      icon={<Feather name="settings" size={18} color="white" />}
+      style={{
+        padding: 0,
+        marginLeft: "auto",
+        backgroundColor: "#D96F32",
+      }}
+      onPress={() => toggleEditMinimalStockModal(id)}
     />
   );
 }

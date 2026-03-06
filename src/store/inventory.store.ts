@@ -6,13 +6,22 @@ interface InventoryState {
   addIngredientModal: boolean;
   addProductModal: boolean;
   addStockModal: boolean;
-  subtractStockModal: boolean;
+  stockInProductModal: boolean;
+  stockInProductId: string;
+  stockOutProductModal: boolean;
+  stockOutProductId: string;
   addStockId: string;
+  subtractStockModal: boolean;
   subtractStockId: string;
+  editMinimalStockModal: boolean;
+  editMinimalStockId: string;
   toggleAddIngredientModal: () => void;
   toggleAddProductModal: () => void;
   toggleAddStockModal: (id?: string) => void;
   toggleSubtractStockModal: (id?: string) => void;
+  toggleEditMinimalStockModal: (id?: string) => void;
+  toggleStockInProductModal: (id?: string) => void;
+  toggleStockOutProductModal: (id?: string) => void;
 }
 
 export const useInventoryStore = create<InventoryState>()(
@@ -22,8 +31,14 @@ export const useInventoryStore = create<InventoryState>()(
       addProductModal: false,
       addStockModal: false,
       subtractStockModal: false,
+      editMinimalStockModal: false,
+      stockInProductModal: false,
+      stockInProductId: "",
+      stockOutProductModal: false,
+      stockOutProductId: "",
       addStockId: "",
       subtractStockId: "",
+      editMinimalStockId: "",
       toggleAddIngredientModal: () =>
         set({ addIngredientModal: !get().addIngredientModal }),
       toggleAddProductModal: () =>
@@ -34,6 +49,21 @@ export const useInventoryStore = create<InventoryState>()(
         set({
           subtractStockModal: !get().subtractStockModal,
           subtractStockId: id,
+        }),
+      toggleEditMinimalStockModal: (id?: string) =>
+        set({
+          editMinimalStockModal: !get().editMinimalStockModal,
+          editMinimalStockId: id,
+        }),
+      toggleStockInProductModal: (id?: string) =>
+        set({
+          stockInProductModal: !get().stockInProductModal,
+          stockInProductId: id,
+        }),
+      toggleStockOutProductModal: (id?: string) =>
+        set({
+          stockOutProductModal: !get().stockOutProductModal,
+          stockOutProductId: id,
         }),
     }),
     {

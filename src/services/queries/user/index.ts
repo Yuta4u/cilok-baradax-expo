@@ -1,5 +1,10 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { addUserApi, getAllUserApi, setActiveApi } from "../../api/user";
+import {
+  addUserApi,
+  getAllUserApi,
+  setActiveApi,
+  updateStockCilokApi,
+} from "../../api/user";
 import { handleError } from "../../../utils/error";
 
 export const useGetAllUserQuery = () => {
@@ -14,6 +19,13 @@ export const useGetAllUserQuery = () => {
 export const useAddUserMutation = () => {
   return useMutation({
     mutationFn: addUserApi,
+    onError: handleError,
+  });
+};
+
+export const useUpdateStockCilokMutation = () => {
+  return useMutation({
+    mutationFn: updateStockCilokApi,
     onError: handleError,
   });
 };

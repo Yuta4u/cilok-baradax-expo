@@ -2,7 +2,10 @@ import { useState, useCallback } from "react";
 import { Modal, View, Text, TextInput, StyleSheet } from "react-native";
 import Button from "../button";
 import { useInventoryStore } from "../../store/inventory.store";
-import { useUpdateStockIngredientMutation } from "../../services/queries/inventory";
+import {
+  useUpdateStockIngredientMutation,
+  useUpdateStockProductMutation,
+} from "../../services/queries/inventory";
 import { ToastSuccess } from "../../utils/toast";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -11,13 +14,13 @@ interface Props {
   onClose: () => void;
 }
 
-export function SubtractStockModal({ visible, onClose }: Props) {
+export function StockInProductModal({ visible, onClose }: Props) {
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState("");
 
-  const { subtractStockId: id } = useInventoryStore();
+  const { stockInProductId: id } = useInventoryStore();
 
-  const { mutate, isPending } = useUpdateStockIngredientMutation();
+  const { mutate, isPending } = useUpdateStockProductMutation();
 
   const handleOnReset = useCallback(() => {
     setQuantity("");
@@ -27,7 +30,7 @@ export function SubtractStockModal({ visible, onClose }: Props) {
   const handleOnSubmit = () => {
     const payload = {
       id,
-      type: 0,
+      type: 1,
       quantity: Number(quantity),
     };
 
@@ -35,21 +38,21 @@ export function SubtractStockModal({ visible, onClose }: Props) {
       onSuccess: ({ message }) => {
         ToastSuccess(message);
         handleOnReset();
-        queryClient.invalidateQueries({ queryKey: ["ingredient:all"] });
+        queryClient.invalidateQueries({ queryKey: ["product:all"] });
       },
     });
   };
 
   return (
     <Modal
-      key={"add-stock-modal"}
+      key={"stock-in-product-modal"}
       visible={visible}
       animationType="slide"
       transparent
     >
       <View style={styles.overlay}>
         <View style={styles.modal}>
-          <Text style={styles.modalTitle}>Stock Out</Text>
+          <Text style={styles.modalTitle}>Stock In</Text>
 
           <Text style={styles.label}>Quantity</Text>
           <TextInput
@@ -81,14 +84,13 @@ export function SubtractStockModal({ visible, onClose }: Props) {
   );
 }
 
-export function SubtractStockModalBtn({ id }: { id: string }) {
-  const { toggleSubtractStockModal } = useInventoryStore();
+export function StockInProductModalBtn({ id }: { id: string }) {
+  const { toggleStockInProductModal } = useInventoryStore();
   return (
     <Button
-      style={{ backgroundColor: "#F8B259" }}
       textStyle={{ fontSize: 14 }}
-      text="- Stock Out"
-      onPress={() => toggleSubtractStockModal(id)}
+      text="+ Stock In"
+      onPress={() => toggleStockInProductModal(id)}
     />
   );
 }

@@ -6,6 +6,7 @@ const ToastSuccess = (message: string) => {
     text1: "Successfully!",
     text2: message,
     visibilityTime: 2000,
+    topOffset: 60,
   });
 };
 
@@ -14,6 +15,7 @@ const ToastError = (message: string) => {
     type: "error",
     text1: "Error!",
     text2: message,
+    topOffset: 60,
   });
 };
 
