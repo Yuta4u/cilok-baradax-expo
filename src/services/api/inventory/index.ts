@@ -3,13 +3,16 @@ import { ToastError } from "../../../utils/toast";
 
 export async function getAllIngredientApi(q: string) {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`http://192.168.60.107:3000/api/ingredient?q=${q}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/ingredient?q=${q}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
     },
-  });
+  );
 
   const data = await res.json();
 
@@ -23,13 +26,16 @@ export async function getAllIngredientApi(q: string) {
 
 export async function getAllProductApi(q: string) {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`http://192.168.60.107:3000/api/product?q=${q}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/product?q=${q}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
     },
-  });
+  );
 
   const data = await res.json();
 
@@ -44,7 +50,7 @@ export async function getAllProductApi(q: string) {
 export async function AddIngredientApi(payload: AddIngredient) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://192.168.60.107:3000/api/ingredient`, {
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/ingredient`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -66,7 +72,7 @@ export async function AddIngredientApi(payload: AddIngredient) {
 export async function AddProductApi(payload: AddProduct) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://192.168.60.107:3000/api/product`, {
+  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/product`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -89,7 +95,7 @@ export async function updateStockIngredientApi(payload: UpdateStockIngredient) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://192.168.60.107:3000/api/ingredient/${payload.id}`,
+    `${process.env.EXPO_PUBLIC_API_URL}/api/ingredient/${payload.id}`,
     {
       method: "PUT",
       headers: {
@@ -114,7 +120,7 @@ export async function updateStockProductApi(payload: UpdateStockProduct) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://192.168.60.107:3000/api/product/stock/${payload.id}`,
+    `${process.env.EXPO_PUBLIC_API_URL}/api/product/stock/${payload.id}`,
     {
       method: "PUT",
       headers: {
@@ -141,7 +147,7 @@ export async function updateMinimalStockIngredientApi(
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://192.168.60.107:3000/api/ingredient/minimal-stock/${payload.id}`,
+    `${process.env.EXPO_PUBLIC_API_URL}/api/ingredient/minimal-stock/${payload.id}`,
     {
       method: "PUT",
       headers: {

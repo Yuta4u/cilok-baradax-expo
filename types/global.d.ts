@@ -6,6 +6,17 @@ interface Response {
   user?: User;
 }
 
+interface AddReport {
+  quantities: Record<string, string>;
+  out: number;
+  note: string;
+}
+
+interface ConfirmReport {
+  id: string;
+  quantities: Record<string, string>;
+}
+
 interface User {
   id: string;
   createdAt: string;
@@ -85,9 +96,8 @@ interface AddUser {
 }
 
 interface AddCashFlow {
-  type: string;
-  amount: number;
-  note: string;
+  id: string;
+  cashFlowItems: Record<string, { qty: number; price: number }>;
 }
 
 interface AddIngredient {
@@ -127,10 +137,13 @@ interface BaseParams {
 interface CashFlow {
   id: string;
   createdAt: string;
-  amount: number;
-  type: string;
+  in: string;
+  out: string;
   note: string;
   name: string;
+  verified: number;
+  setDialogVisible: (f: boolean) => void;
+  setViewId: (id: string) => void;
 }
 
 type BaseResponse = {

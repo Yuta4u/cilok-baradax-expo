@@ -1,7 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { formatIDR } from "../../utils/format";
-import { AddStockModalBtn } from "../modal/add-stock.modal";
 import { SubtractStockModalBtn } from "../modal/subtract-stock.modal";
 import { EditMinimalStockModalBtn } from "../modal/edit-minimal-stock.modal";
 
@@ -62,7 +61,6 @@ export default function InventoryCard({ item }: Props) {
       {/* Tombol aksi */}
       <View style={styles.btnRow}>
         <SubtractStockModalBtn id={item.id} />
-        <AddStockModalBtn id={item.id} />
         <EditMinimalStockModalBtn id={item.id} />
       </View>
     </View>

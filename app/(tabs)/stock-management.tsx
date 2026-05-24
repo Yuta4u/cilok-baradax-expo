@@ -9,16 +9,12 @@ import PageLayout from "../../src/components/layout";
 import { useGetAllKaryawanQuery } from "../../src/services/queries/stock-management";
 import StockManagementCard from "../../src/components/card/stock-management.card";
 import { useStockManagementStore } from "../../src/store/stock-management.store";
-import AddStockCilokModal from "../../src/components/modal/add-stock-cilok.modal";
+import { AddStockModal } from "../../src/components/modal/add-stock.modal";
 
 export default function StockManagement() {
   const { data, isPending } = useGetAllKaryawanQuery();
 
-  const {
-    addStockCilokModal,
-    addStockCilokModalData,
-    toggleAddStockCilokModal,
-  } = useStockManagementStore();
+  const { addStockModal: flag } = useStockManagementStore();
 
   const loading = isPending;
   return (
@@ -29,12 +25,7 @@ export default function StockManagement() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => (
-            <StockManagementCard
-              user={item}
-              onUpdateStock={() => console.log("lol")}
-            />
-          )}
+          renderItem={({ item }) => <StockManagementCard user={item} />}
           ListEmptyComponent={
             loading ? (
               <View style={styles.emptyWrap}>
@@ -48,14 +39,7 @@ export default function StockManagement() {
           }
         />
       </View>
-      {addStockCilokModal && (
-        <AddStockCilokModal
-          mode="add"
-          onClose={() => toggleAddStockCilokModal(undefined)}
-          user={addStockCilokModalData || ({} as User)}
-          visible={addStockCilokModal}
-        />
-      )}
+      {flag && <AddStockModal />}
     </PageLayout>
   );
 }

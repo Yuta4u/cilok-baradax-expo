@@ -110,7 +110,7 @@ export default function AddStockCilokModal({
     <Modal
       transparent
       visible={visible}
-      animationType="none"
+      animationType="slide"
       onRequestClose={onClose}
     >
       <KeyboardAvoidingView

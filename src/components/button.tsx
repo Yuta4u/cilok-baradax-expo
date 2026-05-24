@@ -11,6 +11,7 @@ interface Props {
   loading?: boolean;
   icon?: JSX.Element;
   key?: string;
+  disabled?: boolean;
   style?: CSSProperties;
   textStyle?: CSSProperties;
   onPress: (value?: any) => void;
@@ -21,6 +22,7 @@ export default function Button({
   icon,
   loading = false,
   style,
+  disabled,
   textStyle,
   onPress,
 }: Props) {
@@ -28,7 +30,7 @@ export default function Button({
     <TouchableOpacity
       style={[styles.button, style as never]}
       onPress={() => onPress()}
-      disabled={loading}
+      disabled={loading || disabled}
     >
       {loading ? (
         <ActivityIndicator color="#fff2de" size="small" />

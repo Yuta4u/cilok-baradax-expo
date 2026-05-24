@@ -1,8 +1,7 @@
-import React, { useRef, useEffect } from "react";
+import React from "react";
 import { View, Text, StyleSheet, Animated } from "react-native";
 import Button from "../button";
 import { useStockManagementStore } from "../../store/stock-management.store";
-import { AddStockModal } from "../modal/add-stock.modal";
 
 // ─── Color Palette ────────────────────────────────────────────────────────────
 const C = {
@@ -35,54 +34,16 @@ interface User {
 
 interface UserStockCardProps {
   user: User;
-  onUpdateStock: (userId: string, newStock: number) => Promise<void> | void;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const LOW = 20;
-const MAX_DISPLAY = 150;
+export default function StockManagementCard({ user }: UserStockCardProps) {
+  const isActive = !user.deletedAt;
+  const { toggleAddStockModal, setAddStockId } = useStockManagementStore();
 
-function getLevel(stock: number) {
-  if (stock <= 0) return "empty";
-  if (stock <= LOW) return "low";
-  return "ok";
-}
-
-const STATUS = {
-  empty: { label: "Habis", color: C.burnt, badgeBg: "#FDEAE4" },
-  low: { label: "Hampir Habis", color: C.orange, badgeBg: "#FFF3E0" },
-  ok: { label: "Aman", color: "#4CAF50", badgeBg: "#E8F5E9" },
-};
-
-export default function StockManagementCard({
-  user,
-  onUpdateStock,
-}: UserStockCardProps) {
-  const { addStockCilokModal, toggleAddStockCilokModal } =
-    useStockManagementStore();
-
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(24)).current;
-
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 350,
-        useNativeDriver: true,
-      }),
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        tension: 70,
-        friction: 10,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
-
-  const level = getLevel(user.stockCilok);
-  const { label, color, badgeBg } = STATUS[level];
-  const progress = Math.min(user.stockCilok / MAX_DISPLAY, 1);
+  const handleOnPress = () => {
+    setAddStockId(user.id);
+    toggleAddStockModal();
+  };
 
   const permLabel =
     user.permission === 0
@@ -93,16 +54,11 @@ export default function StockManagementCard({
 
   return (
     <>
-      <Animated.View
-        style={[
-          cs.card,
-          { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-        ]}
-      >
-        <View style={[cs.strip, { backgroundColor: color }]} />
+      <Animated.View style={[cs.card]}>
+        <View style={[cs.strip]} />
         <View style={cs.body}>
           <View style={cs.identityRow}>
-            <View style={[cs.avatar, { borderColor: color }]}>
+            <View style={[cs.avatar]}>
               <Text style={cs.avatarInitial}>
                 {user.name.charAt(0).toUpperCase()}
               </Text>
@@ -126,52 +82,21 @@ export default function StockManagementCard({
                     { backgroundColor: user.active ? "#4CAF50" : C.gray },
                   ]}
                 />
-                <Text
-                  style={[
-                    cs.activeText,
-                    { color: user.active ? "#4CAF50" : C.gray },
-                  ]}
-                >
-                  {user?.deletedAt ? "Aktif" : "Nonaktif"}
+                <Text style={[cs.activeText, { color: "#4CAF50" }]}>
+                  {"Aktif"}
                 </Text>
               </View>
             </View>
           </View>
           <View style={cs.divider} />
-          <View style={cs.stockRow}>
-            <View>
-              <Text style={cs.stockLabel}>Stock Cilok</Text>
-              <View style={cs.stockNumRow}>
-                <Text style={[cs.stockNum, { color }]}>{user.stockCilok}</Text>
-                <Text style={cs.stockUnit}>pcs</Text>
-              </View>
-            </View>
-            <View style={[cs.statusBadge, { backgroundColor: badgeBg }]}>
-              <View style={[cs.statusDot, { backgroundColor: color }]} />
-              <Text style={[cs.statusText, { color }]}>{label}</Text>
-            </View>
-          </View>
-          <View style={cs.barTrack}>
-            <View
-              style={[
-                cs.barFill,
-                {
-                  width: `${Math.max(progress * 100, user.stockCilok > 0 ? 2 : 0)}%`,
-                  backgroundColor: color,
-                },
-              ]}
-            />
-          </View>
-          <View style={cs.barLabels}>
-            <Text style={cs.barLabelText}>0</Text>
-            <Text style={cs.barLabelText}>{MAX_DISPLAY} pcs</Text>
-          </View>
+
           <View style={cs.btnRow}>
             <Button
               style={{ width: "100%" }}
               textStyle={{ fontSize: 14 }}
               text="+ Tambah"
-              onPress={() => toggleAddStockCilokModal(user)}
+              disabled={!isActive}
+              onPress={handleOnPress}
             />
           </View>
         </View>
@@ -211,6 +136,7 @@ const cs = StyleSheet.create({
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
+    borderColor: "#C75D2C",
   },
   avatarInitial: { fontSize: 22, fontWeight: "800", color: C.rust },
   identityMid: { flex: 1, gap: 3 },

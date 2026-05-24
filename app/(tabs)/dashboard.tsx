@@ -1,29 +1,27 @@
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
-  TextInput,
   TouchableOpacity,
   ScrollView,
   StatusBar,
-  Modal,
-  KeyboardAvoidingView,
   Platform,
-  Alert,
+  TextStyle,
 } from "react-native";
 import { useAuthStore } from "../../src/utils/authStore";
 import {
   useAddCashFlowMutation,
   useGetAllCashFlowQuery,
 } from "../../src/services/queries/dashboard";
-import { UseMutateFunction, useQueryClient } from "@tanstack/react-query";
-import { ToastSuccess } from "../../src/utils/toast";
-import { router } from "expo-router";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Pagination from "../../src/components/pagination";
 import { format } from "date-fns";
 import { hasPermission } from "../../src/utils/permissions";
+import { formatIDR } from "../../src/utils/format";
+import { Dialog } from "../../src/components/dialog";
+import { AddReportModal } from "../../src/components/modal/add-report.modal";
+import { useDashboardStore } from "../../src/store/dashboard.store";
+import { ViewDetailModal } from "../../src/components/modal/view-detail.modal";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 type TransactionType = "income" | "expense";
@@ -56,66 +54,60 @@ interface BarChartProps {
 }
 
 const BarChart: React.FC<BarChartProps> = ({ transactions }) => {
-  const days = getLast7Days();
-  const BAR_HEIGHT = 120;
-
-  const dailyData = days.map((day) => {
-    const inc = transactions
-      .filter(
-        (t) => t.type === "INCOME" && format(t.createdAt, "yyyy-MM-dd") === day,
-      )
-      .reduce((s, t) => s + t.amount, 0);
-    const exp = transactions
-      .filter(
-        (t) =>
-          t.type === "EXPENSE" && format(t.createdAt, "yyyy-MM-dd") === day,
-      )
-      .reduce((s, t) => s + t.amount, 0);
-    return { day, inc, exp };
-  });
-
-  const maxVal = Math.max(...dailyData.map((d) => Math.max(d.inc, d.exp)), 1);
-
-  return (
-    <View style={chartStyles.container}>
-      <View style={chartStyles.legend}>
-        <View style={chartStyles.legendItem}>
-          <View style={[[chartStyles.dot], { backgroundColor: "#2cc76d" }]} />
-          <Text style={chartStyles.legendText}>Pemasukan</Text>
-        </View>
-        <View style={chartStyles.legendItem}>
-          <View style={[chartStyles.dot, { backgroundColor: "#c7362c" }]} />
-          <Text style={chartStyles.legendText}>Pengeluaran</Text>
-        </View>
-      </View>
-
-      <View style={chartStyles.chartArea}>
-        {dailyData.map((d) => {
-          const incH = (d.inc / maxVal) * BAR_HEIGHT;
-          const expH = (d.exp / maxVal) * BAR_HEIGHT;
-          return (
-            <View key={d.day} style={chartStyles.dayColumn}>
-              <View style={[chartStyles.barsRow, { height: BAR_HEIGHT }]}>
-                <View
-                  style={[
-                    chartStyles.bar,
-                    { height: incH, backgroundColor: "#2cc76d" },
-                  ]}
-                />
-                <View
-                  style={[
-                    chartStyles.bar,
-                    { height: expH, backgroundColor: "#c7362c" },
-                  ]}
-                />
-              </View>
-              <Text style={chartStyles.dayLabel}>{shortDay(d.day)}</Text>
-            </View>
-          );
-        })}
-      </View>
-    </View>
-  );
+  // const days = getLast7Days();
+  // const BAR_HEIGHT = 120;
+  // const dailyData = days.map((day) => {
+  //   const inc = transactions
+  //     .filter(
+  //       (t) => t.type === "INCOME" && format(t.createdAt, "yyyy-MM-dd") === day,
+  //     )
+  //     .reduce((s, t) => s + t.amount, 0);
+  //   const exp = transactions
+  //     .filter(
+  //       (t) =>
+  //         t.type === "EXPENSE" && format(t.createdAt, "yyyy-MM-dd") === day,
+  //     )
+  //     .reduce((s, t) => s + t.in, 0);
+  //   return { day, inc, exp };
+  // });
+  // const maxVal = Math.max(...dailyData.map((d) => Math.max(d.inc, d.exp)), 1);
+  // return (
+  //   <View style={chartStyles.container}>
+  //     <View style={chartStyles.legend}>
+  //       <View style={chartStyles.legendItem}>
+  //         <Text style={chartStyles.legendText}>🟢 Pemasukan</Text>
+  //       </View>
+  //       <View style={chartStyles.legendItem}>
+  //         <Text style={chartStyles.legendText}>🔴 Pengeluaran</Text>
+  //       </View>
+  //     </View>
+  //     <View style={chartStyles.chartArea}>
+  //       {dailyData.map((d) => {
+  //         const incH = (d.inc / maxVal) * BAR_HEIGHT;
+  //         const expH = (d.exp / maxVal) * BAR_HEIGHT;
+  //         return (
+  //           <View key={d.day} style={chartStyles.dayColumn}>
+  //             <View style={[chartStyles.barsRow, { height: BAR_HEIGHT }]}>
+  //               <View
+  //                 style={[
+  //                   chartStyles.bar,
+  //                   { height: incH, backgroundColor: "#2cc76d" },
+  //                 ]}
+  //               />
+  //               <View
+  //                 style={[
+  //                   chartStyles.bar,
+  //                   { height: expH, backgroundColor: "#c7362c" },
+  //                 ]}
+  //               />
+  //             </View>
+  //             <Text style={chartStyles.dayLabel}>{shortDay(d.day)}</Text>
+  //           </View>
+  //         );
+  //       })}
+  //     </View>
+  //   </View>
+  // );
 };
 
 const chartStyles = StyleSheet.create({
@@ -142,258 +134,58 @@ const chartStyles = StyleSheet.create({
   bar: { width: 10, borderRadius: 4, minHeight: 2 },
   dayLabel: {
     marginTop: 6,
-    color: "#64748B",
-    fontSize: 10,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+    fontSize: 11,
+    fontWeight: "300",
   },
 });
 
 // ── Input Modal ───────────────────────────────────────────────────────────────
-interface InputModalProps {
-  visible: boolean;
-  user: User | null;
-  onClose: () => void;
-  onSave: UseMutateFunction<any, ApiError, AddCashFlow, unknown>;
-}
 
-const InputModal: React.FC<InputModalProps> = ({
-  visible,
-  onClose,
-  onSave,
-  user,
-}) => {
-  const queryClient = useQueryClient();
-  const [type, setType] = useState<TransactionType>("income");
-  const [amount, setAmount] = useState("");
-  const [label, setLabel] = useState("");
-
-  const handleSave = () => {
-    const num = parseInt(amount.replace(/\D/g, ""), 10);
-    if (!num || num <= 0) {
-      Alert.alert("Jumlah tidak valid", "Masukkan jumlah lebih dari 0");
-      return;
-    }
-    if (!label.trim()) {
-      Alert.alert("Label kosong", "Isi keterangan transaksi");
-      return;
-    }
-
-    const payload = {
-      amount: num,
-      type: type.toUpperCase(),
-      note: label.trim(),
-    };
-
-    onSave(payload, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["cash-flow:all"] });
-        ToastSuccess("Successfully! Transaksi berhasil ditambahkan.");
-        onClose();
-      },
-    });
-
-    setAmount("");
-    setLabel("");
-    setType("income");
-    onClose();
+// ── Transaction Item ──────────────────────────────────────────────────────────
+// ── Transaction Item ──────────────────────────────────────────────────────────
+const TxItem: React.FC<{ tx: CashFlow }> = ({ tx }) => {
+  const handleOnPress = () => {
+    tx.setViewId(tx.id);
+    tx.setDialogVisible(true);
   };
-
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-        style={modalStyles.overlay}
+    <View style={tx$.row}>
+      <View
+        style={[
+          tx$.icon,
+          { backgroundColor: tx.verified ? "#2cc76d" : "#ef4444" },
+        ]}
       >
-        <TouchableOpacity
-          style={modalStyles.backdrop}
-          activeOpacity={1}
-          onPress={onClose}
-        />
-        <View style={modalStyles.sheet}>
-          <View style={modalStyles.handle} />
-          <Text style={modalStyles.title}>Tambah Transaksi</Text>
+        <Text style={tx$.iconText}>{tx.name[0].toUpperCase()}</Text>
+      </View>
 
-          {/* Type Toggle */}
-          <View style={modalStyles.toggle}>
-            {(["income", "expense"] as TransactionType[]).map((t) => (
-              <TouchableOpacity
-                key={t}
-                style={[
-                  modalStyles.toggleBtn,
-                  type === t &&
-                    (t === "income"
-                      ? modalStyles.activeIncome
-                      : modalStyles.activeExpense),
-                ]}
-                onPress={() => setType(t)}
-              >
-                <Text
-                  style={[
-                    modalStyles.toggleText,
-                    type === t && modalStyles.toggleTextActive,
-                  ]}
-                >
-                  {t === "income" ? "💰 Pemasukan" : "💸 Pengeluaran"}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
+      <View style={tx$.info}>
+        <Text style={tx$.name}>{tx.name}</Text>
+        <Text style={tx$.meta}>{format(tx.createdAt, "dd MMM yyyy")}</Text>
+      </View>
 
-          <Text style={modalStyles.label}>Jumlah (Rp)</Text>
-          <TextInput
-            style={modalStyles.input}
-            keyboardType="numeric"
-            placeholder="0"
-            placeholderTextColor="#475569"
-            value={amount}
-            onChangeText={setAmount}
-          />
-
-          <Text style={modalStyles.label}>Keterangan</Text>
-          <TextInput
-            style={modalStyles.input}
-            placeholder="cth: Gaji, Makan Siang..."
-            placeholderTextColor="#475569"
-            value={label}
-            onChangeText={setLabel}
-          />
-
-          <TouchableOpacity
-            style={[
-              modalStyles.saveBtn,
-              { backgroundColor: type === "income" ? "#34D399" : "#F87171" },
-            ]}
-            onPress={handleSave}
-          >
-            <Text style={modalStyles.saveBtnText}>Simpan</Text>
-          </TouchableOpacity>
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+      <View style={tx$.right}>
+        <Text style={[tx$.amount]}>+ Rp{formatIDR(tx.in?.toString())}</Text>
+        <TouchableOpacity onPress={handleOnPress} hitSlop={8}>
+          <Text style={tx$.view}>View</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
-const modalStyles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: "flex-end" },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  sheet: {
-    backgroundColor: "#e9b190",
+const MONO: TextStyle = {
+  fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+};
 
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-    borderWidth: 1,
-    borderColor: "#1E293B",
-  },
-  handle: {
-    width: 40,
-    height: 4,
-    backgroundColor: "#334155",
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 20,
-  },
-  title: {
-    color: "#F1F5F9",
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 20,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-  },
-  toggle: {
-    flexDirection: "row",
-    backgroundColor: "#fff2de",
-    borderColor: "#3341553a",
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 20,
-    gap: 4,
-  },
-  toggleBtn: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 10,
-    alignItems: "center",
-  },
-  activeIncome: { backgroundColor: "#2cc76d" },
-  activeExpense: { backgroundColor: "#c7362c" },
-  toggleText: {
-    color: "#64748B",
-    fontSize: 13,
-    fontWeight: "600",
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-  },
-  toggleTextActive: { color: "#F1F5F9" },
-  label: {
-    color: "#64748B",
-    fontSize: 12,
-    marginBottom: 6,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-    letterSpacing: 1,
-  },
-  input: {
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 15,
-    marginBottom: 14,
-    borderWidth: 1,
-    backgroundColor: "#fff2de",
-    borderColor: "#3341553a",
-  },
-  saveBtn: {
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  saveBtnText: {
-    color: "#0F172A",
-    fontSize: 15,
-    fontWeight: "800",
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-  },
-});
-
-// ── Transaction Item ──────────────────────────────────────────────────────────
-const TxItem: React.FC<{ tx: CashFlow }> = ({ tx }) => (
-  <View style={txStyles.row}>
-    <View
-      style={[
-        txStyles.icon,
-        { backgroundColor: tx.type === "INCOME" ? "#2cc76d" : "#c7362c" },
-      ]}
-    >
-      <Text style={{ fontSize: 16, color: "#fff" }}>
-        {tx.type === "INCOME" ? "↑" : "↓"}
-      </Text>
-    </View>
-    <View style={txStyles.info}>
-      <Text style={txStyles.txLabel}>{tx.note}</Text>
-      <Text style={txStyles.txDate}>{format(tx.createdAt, "dd-MM-yyyy")}</Text>
-    </View>
-    <Text
-      style={[
-        txStyles.amount,
-        { color: tx.type === "INCOME" ? "#2cc76d" : "#c7362c" },
-      ]}
-    >
-      {tx.type === "INCOME" ? "+" : "-"}
-      {formatRupiah(tx.amount)}
-    </Text>
-  </View>
-);
-
-const txStyles = StyleSheet.create({
+const tx$ = StyleSheet.create({
   row: {
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: "#1e293b1c",
+    borderBottomColor: "#1e293b20",
+    gap: 12,
   },
   icon: {
     width: 40,
@@ -401,53 +193,66 @@ const txStyles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
   },
-  info: { flex: 1 },
-  txLabel: { color: "#fff", fontSize: 14, fontWeight: "600" },
-  txDate: {
-    color: "#475569",
-    fontSize: 11,
-    marginTop: 2,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+  iconText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  info: {
+    flex: 1,
+    gap: 3,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#f1f5f9",
+  },
+  meta: {
+    fontSize: 9,
+    ...MONO,
+  },
+  right: {
+    alignItems: "flex-end",
+    gap: 4,
   },
   amount: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "700",
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+    color: "#21c46a",
+    ...MONO,
+  },
+  view: {
+    fontSize: 11,
+    fontWeight: "600",
   },
 });
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function Dashboard() {
-  const { user, logout } = useAuthStore.getState();
+  const { user } = useAuthStore.getState();
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const [type, setType] = useState<"ALL" | "INCOME" | "EXPENSE">("ALL");
   const [page, setPage] = useState(1);
+  const [viewId, setViewId] = useState("");
+  const { toggleReportModal, toggleViewDetailModal } = useDashboardStore();
 
-  const { mutate } = useAddCashFlowMutation();
   const {
     data,
   }: {
     data: {
       data: CashFlow[];
-      totalIncome: number;
-      totalExpense: number;
-      todayIncome: number;
-      todayExpense: number;
+      totalIn: number;
+      totalOut: number;
+      todayIn: number;
+      todayOut: number;
+      total: number;
       metadata: Metadata;
     };
   } = useGetAllCashFlowQuery({
     page,
-    type,
   }) as any;
 
-  const handleLogout = useCallback(() => {
-    logout();
-    router.replace("/sign-in");
-    ToastSuccess("Successfully logged out.");
-  }, []);
+  console.log(data?.todayIn);
 
   const authorized =
     hasPermission(user!.permission, "SUPER_USER") ||
@@ -463,7 +268,7 @@ export default function Dashboard() {
         {/* Header */}
         <View style={styles.header}>
           <View>
-            <Text style={styles.greeting}>Halo! 👋</Text>
+            <Text style={styles.greeting}>Halo, {user?.name}</Text>
             <Text style={styles.subtitle}>
               {new Date().toLocaleDateString("id-ID", {
                 weekday: "long",
@@ -472,45 +277,37 @@ export default function Dashboard() {
               })}
             </Text>
           </View>
-          <View style={{ display: "flex", flexDirection: "row", gap: 6 }}>
-            <TouchableOpacity
-              style={styles.addBtn}
-              onPress={() => setModalVisible(true)}
-            >
-              <Text style={styles.addBtnText}>+ Tambah</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout}>
-              <MaterialIcons name="logout" size={17} color="white" />
-            </TouchableOpacity>
-          </View>
+          {
+            <View style={{ display: "flex", flexDirection: "row", gap: 6 }}>
+              <TouchableOpacity
+                style={styles.addBtn}
+                onPress={toggleReportModal}
+              >
+                <Text style={styles.addBtnText}>+ Laporan</Text>
+              </TouchableOpacity>
+            </View>
+          }
         </View>
 
         {authorized && (
           <View>
             <View style={styles.balanceCard}>
-              <Text style={styles.balanceLabel}>SALDO BERSIH</Text>
-              <Text
-                style={[
-                  styles.balanceAmount,
-                  {
-                    color: false ? "#2cc76d" : "#c7362c",
-                  },
-                ]}
-              >
-                {formatRupiah(data?.totalIncome - data?.totalExpense || 0)}
+              <Text style={styles.balanceLabel}>SALDO BERSIH 🟢</Text>
+              <Text style={styles.balanceAmount}>
+                {formatRupiah(Number(data?.total) || 0)}
               </Text>
               <View style={styles.balanceRow}>
                 <View style={styles.balanceSub}>
-                  <Text style={styles.balanceSubLabel}>↑ Total Masuk</Text>
-                  <Text style={[styles.balanceSubVal, { color: "#2cc76d" }]}>
-                    {formatRupiah(data?.totalIncome || 0)}
+                  <Text style={styles.balanceSubLabel}>Total Masuk 🟢</Text>
+                  <Text style={[styles.balanceSubVal]}>
+                    {formatRupiah(Number(data?.totalIn) || 0)}
                   </Text>
                 </View>
                 <View style={styles.divider} />
                 <View style={styles.balanceSub}>
-                  <Text style={styles.balanceSubLabel}>↓ Total Keluar</Text>
-                  <Text style={[styles.balanceSubVal, { color: "#c7362c" }]}>
-                    {formatRupiah(data?.totalExpense || 0)}
+                  <Text style={styles.balanceSubLabel}>Total Keluar 🔴</Text>
+                  <Text style={styles.balanceSubVal}>
+                    {formatRupiah(Number(data?.totalOut) || 0)}
                   </Text>
                 </View>
               </View>
@@ -518,15 +315,17 @@ export default function Dashboard() {
 
             <View style={styles.todayRow}>
               <View style={[styles.todayCard]}>
-                <Text style={styles.todayCardLabel}>Pemasukan Hari Ini</Text>
-                <Text style={[styles.todayCardAmt, { color: "#2cc76d" }]}>
-                  {formatRupiah(data?.todayIncome || 0)}
+                <Text style={styles.todayCardLabel}>Pemasukan Hari Ini 🟢</Text>
+                <Text style={styles.todayCardAmt}>
+                  {formatRupiah(Number(data?.todayIn) || 0)}
                 </Text>
               </View>
               <View style={[styles.todayCard]}>
-                <Text style={styles.todayCardLabel}>Pengeluaran Hari Ini</Text>
-                <Text style={[styles.todayCardAmt, { color: "#c7362c" }]}>
-                  {formatRupiah(data?.todayExpense || 0)}
+                <Text style={styles.todayCardLabel}>
+                  Pengeluaran Hari Ini 🔴
+                </Text>
+                <Text style={styles.todayCardAmt}>
+                  {formatRupiah(Number(data?.todayOut) || 0)}
                 </Text>
               </View>
             </View>
@@ -542,27 +341,17 @@ export default function Dashboard() {
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Riwayat Transaksi</Text>
 
-          {/* Filter Tabs */}
-          <View style={styles.filterRow}>
-            {(["ALL", "INCOME", "EXPENSE"] as const).map((f) => (
-              <TouchableOpacity
-                key={f}
-                style={[styles.filterBtn, type === f && styles.filterBtnActive]}
-                onPress={() => setType(f)}
-              >
-                <Text
-                  style={[
-                    styles.filterText,
-                    type === f && styles.filterTextActive,
-                  ]}
-                >
-                  {f === "ALL" ? "Semua" : f === "INCOME" ? "Masuk" : "Keluar"}
-                </Text>
-              </TouchableOpacity>
+          {data &&
+            data.data.map((cf: any) => (
+              <TxItem
+                key={cf.id}
+                tx={{
+                  ...cf,
+                  setDialogVisible: toggleViewDetailModal,
+                  setViewId,
+                }}
+              />
             ))}
-          </View>
-
-          {data && data.data.map((cf: any) => <TxItem key={cf.id} tx={cf} />)}
           {data && (
             <Pagination
               metadata={data?.metadata}
@@ -572,12 +361,8 @@ export default function Dashboard() {
         </View>
       </ScrollView>
 
-      <InputModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={mutate}
-        user={user}
-      />
+      <ViewDetailModal id={viewId} />
+      <AddReportModal />
     </View>
   );
 }
@@ -594,9 +379,8 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   greeting: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "800",
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
   },
   subtitle: {
     color: "#475569",
@@ -628,30 +412,26 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   balanceLabel: {
-    color: "#475569",
-    fontSize: 11,
-    letterSpacing: 2,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+    fontSize: 14,
+    letterSpacing: 1,
+    fontWeight: "500",
   },
   balanceAmount: {
-    fontSize: 32,
-    fontWeight: "800",
+    fontSize: 16,
     marginTop: 4,
     marginBottom: 20,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+    fontWeight: "300",
   },
   balanceRow: { flexDirection: "row", alignItems: "center" },
   balanceSub: { flex: 1 },
   balanceSubLabel: {
-    color: "#475569",
-    fontSize: 11,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+    fontSize: 12,
+    fontWeight: "500",
   },
   balanceSubVal: {
     fontSize: 16,
-    fontWeight: "700",
+    fontWeight: "300",
     marginTop: 4,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
   },
   divider: {
     width: 1,
@@ -670,16 +450,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   todayCardLabel: {
-    color: "#475569",
-    fontSize: 10,
+    fontSize: 11,
     letterSpacing: 1,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+    fontWeight: "500",
   },
   todayCardAmt: {
     fontSize: 16,
-    fontWeight: "800",
+    fontWeight: "300",
     marginTop: 6,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
   },
 
   card: {
@@ -692,9 +470,9 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 12,
-    letterSpacing: 2,
+    letterSpacing: 1,
     marginBottom: 16,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
+    fontWeight: "500",
   },
 
   filterRow: { flexDirection: "row", gap: 8, marginBottom: 8 },

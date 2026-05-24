@@ -1,5 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  addCashFlow,
   getAllKaryawanApi,
   updateStockCilokApi,
 } from "../../api/stock-management";
@@ -16,6 +17,13 @@ export const useGetAllKaryawanQuery = () => {
 export const useUpdateStockCilokMutation = () => {
   return useMutation({
     mutationFn: updateStockCilokApi,
+    onError: handleError,
+  });
+};
+
+export const useAddCashFlowMutation = () => {
+  return useMutation({
+    mutationFn: addCashFlow,
     onError: handleError,
   });
 };

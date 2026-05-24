@@ -1,6 +1,7 @@
 import { Tabs } from "expo-router";
 
 import Ionicons from "@expo/vector-icons/Ionicons";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { useAuthStore } from "../../src/utils/authStore";
 import { hasPermission } from "../../src/utils/permissions";
 
@@ -55,6 +56,14 @@ export default function TabLayout() {
             <Ionicons name={"home-sharp"} color={color} size={24} />
           ),
           href: authorized ? "/user" : "/(tabs)/dashboard",
+        }}
+      />
+      <Tabs.Screen
+        name="logout"
+        options={{
+          tabBarIcon: ({ color }) => (
+            <MaterialIcons name="logout" size={24} color={color} />
+          ),
         }}
       />
     </Tabs>
