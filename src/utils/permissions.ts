@@ -1,7 +1,7 @@
 export const PERMISSION = {
   SUPER_USER: 0x01,
   ADMIN: 0x02,
-  KARYAWAN: 0x04,
+  CABANG: 0x04,
 } as const;
 
 export const enumeratePermission = (perm: number) => {

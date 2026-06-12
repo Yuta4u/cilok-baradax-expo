@@ -1,9 +1,9 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   addUserApi,
+  changePassword,
   getAllUserApi,
   setActiveApi,
-  updateStockCilokApi,
 } from "../../api/user";
 import { handleError } from "../../../utils/error";
 
@@ -23,9 +23,9 @@ export const useAddUserMutation = () => {
   });
 };
 
-export const useUpdateStockCilokMutation = () => {
+export const useChangePasswordMutation = () => {
   return useMutation({
-    mutationFn: updateStockCilokApi,
+    mutationFn: changePassword,
     onError: handleError,
   });
 };

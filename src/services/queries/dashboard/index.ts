@@ -5,9 +5,29 @@ import {
   addReportApi,
   confirmReportApi,
   getAllCashFlowApi,
+  getCabangToday,
   getCashFlowByIdApi,
+  getDashboard,
   getViewCashFlowApi,
 } from "../../api/dashboard";
+
+export const useDashboardQuery = () => {
+  return useQuery({
+    queryKey: ["dashboard:all"],
+    queryFn: getDashboard,
+    refetchOnMount: true,
+    retryOnMount: true,
+  });
+};
+
+export const useCabangTodayQuery = () => {
+  return useQuery({
+    queryKey: ["cabang:today"],
+    queryFn: getCabangToday,
+    refetchOnMount: true,
+    retryOnMount: true,
+  });
+};
 
 //
 export const useAddCashFlowMutation = () => {

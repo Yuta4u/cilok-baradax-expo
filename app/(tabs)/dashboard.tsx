@@ -1,496 +1,313 @@
-import React, { useState } from "react";
+import React from "react";
 import {
   View,
   Text,
-  StyleSheet,
-  TouchableOpacity,
   ScrollView,
-  StatusBar,
+  TouchableOpacity,
+  StyleSheet,
   Platform,
-  TextStyle,
+  StatusBar,
 } from "react-native";
-import { useAuthStore } from "../../src/utils/authStore";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
-  useAddCashFlowMutation,
-  useGetAllCashFlowQuery,
+  useCabangTodayQuery,
+  useDashboardQuery,
 } from "../../src/services/queries/dashboard";
-import Pagination from "../../src/components/pagination";
-import { format } from "date-fns";
-import { hasPermission } from "../../src/utils/permissions";
-import { formatIDR } from "../../src/utils/format";
-import { Dialog } from "../../src/components/dialog";
-import { AddReportModal } from "../../src/components/modal/add-report.modal";
-import { useDashboardStore } from "../../src/store/dashboard.store";
-import { ViewDetailModal } from "../../src/components/modal/view-detail.modal";
 
-// ── Types ──────────────────────────────────────────────────────────────────────
-type TransactionType = "income" | "expense";
+const ORANGE = "#B94A1A";
 
-const formatRupiah = (value: number): string =>
-  new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    maximumFractionDigits: 0,
-  }).format(value);
+const formatRupiah = (angka: number) =>
+  "Rp " + angka.toLocaleString("id-ID", { minimumFractionDigits: 0 });
 
-const getLast7Days = (): string[] => {
-  const days: string[] = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(d.toISOString().split("T")[0]);
-  }
-  return days;
-};
+export default function DashboardScreen({ navigation }: any) {
+  const { data: dashboardData } = useDashboardQuery();
+  const { data: cabangTodayData } = useCabangTodayQuery();
 
-const shortDay = (iso: string): string => {
-  const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("id-ID", { weekday: "short" });
-};
-
-// ── Bar Chart Component ───────────────────────────────────────────────────────
-interface BarChartProps {
-  transactions: CashFlow[];
-}
-
-const BarChart: React.FC<BarChartProps> = ({ transactions }) => {
-  // const days = getLast7Days();
-  // const BAR_HEIGHT = 120;
-  // const dailyData = days.map((day) => {
-  //   const inc = transactions
-  //     .filter(
-  //       (t) => t.type === "INCOME" && format(t.createdAt, "yyyy-MM-dd") === day,
-  //     )
-  //     .reduce((s, t) => s + t.amount, 0);
-  //   const exp = transactions
-  //     .filter(
-  //       (t) =>
-  //         t.type === "EXPENSE" && format(t.createdAt, "yyyy-MM-dd") === day,
-  //     )
-  //     .reduce((s, t) => s + t.in, 0);
-  //   return { day, inc, exp };
-  // });
-  // const maxVal = Math.max(...dailyData.map((d) => Math.max(d.inc, d.exp)), 1);
-  // return (
-  //   <View style={chartStyles.container}>
-  //     <View style={chartStyles.legend}>
-  //       <View style={chartStyles.legendItem}>
-  //         <Text style={chartStyles.legendText}>🟢 Pemasukan</Text>
-  //       </View>
-  //       <View style={chartStyles.legendItem}>
-  //         <Text style={chartStyles.legendText}>🔴 Pengeluaran</Text>
-  //       </View>
-  //     </View>
-  //     <View style={chartStyles.chartArea}>
-  //       {dailyData.map((d) => {
-  //         const incH = (d.inc / maxVal) * BAR_HEIGHT;
-  //         const expH = (d.exp / maxVal) * BAR_HEIGHT;
-  //         return (
-  //           <View key={d.day} style={chartStyles.dayColumn}>
-  //             <View style={[chartStyles.barsRow, { height: BAR_HEIGHT }]}>
-  //               <View
-  //                 style={[
-  //                   chartStyles.bar,
-  //                   { height: incH, backgroundColor: "#2cc76d" },
-  //                 ]}
-  //               />
-  //               <View
-  //                 style={[
-  //                   chartStyles.bar,
-  //                   { height: expH, backgroundColor: "#c7362c" },
-  //                 ]}
-  //               />
-  //             </View>
-  //             <Text style={chartStyles.dayLabel}>{shortDay(d.day)}</Text>
-  //           </View>
-  //         );
-  //       })}
-  //     </View>
-  //   </View>
-  // );
-};
-
-const chartStyles = StyleSheet.create({
-  container: { marginTop: 8 },
-  legend: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 16,
-    marginBottom: 12,
-  },
-  legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: {
-    fontSize: 11,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-  },
-  chartArea: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-  },
-  dayColumn: { alignItems: "center", flex: 1 },
-  barsRow: { flexDirection: "row", alignItems: "flex-end", gap: 2 },
-  bar: { width: 10, borderRadius: 4, minHeight: 2 },
-  dayLabel: {
-    marginTop: 6,
-    fontSize: 11,
-    fontWeight: "300",
-  },
-});
-
-// ── Input Modal ───────────────────────────────────────────────────────────────
-
-// ── Transaction Item ──────────────────────────────────────────────────────────
-// ── Transaction Item ──────────────────────────────────────────────────────────
-const TxItem: React.FC<{ tx: CashFlow }> = ({ tx }) => {
-  const handleOnPress = () => {
-    tx.setViewId(tx.id);
-    tx.setDialogVisible(true);
-  };
   return (
-    <View style={tx$.row}>
-      <View
-        style={[
-          tx$.icon,
-          { backgroundColor: tx.verified ? "#2cc76d" : "#ef4444" },
-        ]}
-      >
-        <Text style={tx$.iconText}>{tx.name[0].toUpperCase()}</Text>
-      </View>
-
-      <View style={tx$.info}>
-        <Text style={tx$.name}>{tx.name}</Text>
-        <Text style={tx$.meta}>{format(tx.createdAt, "dd MMM yyyy")}</Text>
-      </View>
-
-      <View style={tx$.right}>
-        <Text style={[tx$.amount]}>+ Rp{formatIDR(tx.in?.toString())}</Text>
-        <TouchableOpacity onPress={handleOnPress} hitSlop={8}>
-          <Text style={tx$.view}>View</Text>
+    <View style={styles.container}>
+      {/* ── Fixed Top Section ── */}
+      {/* Header */}
+      <View style={styles.header}>
+        <StatusBar backgroundColor={ORANGE} barStyle="light-content" />
+        <TouchableOpacity>
+          <Ionicons name="menu" size={26} color="#fff" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Dashboard</Text>
+        <TouchableOpacity>
+          <Ionicons name="notifications-outline" size={24} color="#fff" />
         </TouchableOpacity>
       </View>
-    </View>
-  );
-};
 
-const MONO: TextStyle = {
-  fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-};
-
-const tx$ = StyleSheet.create({
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: "#1e293b20",
-    gap: 12,
-  },
-  icon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  info: {
-    flex: 1,
-    gap: 3,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#f1f5f9",
-  },
-  meta: {
-    fontSize: 9,
-    ...MONO,
-  },
-  right: {
-    alignItems: "flex-end",
-    gap: 4,
-  },
-  amount: {
-    fontSize: 13,
-    fontWeight: "700",
-    color: "#21c46a",
-    ...MONO,
-  },
-  view: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
-});
-
-// ── Main App ──────────────────────────────────────────────────────────────────
-export default function Dashboard() {
-  const { user } = useAuthStore.getState();
-
-  const [page, setPage] = useState(1);
-  const [viewId, setViewId] = useState("");
-  const { toggleReportModal, toggleViewDetailModal } = useDashboardStore();
-
-  const {
-    data,
-  }: {
-    data: {
-      data: CashFlow[];
-      totalIn: number;
-      totalOut: number;
-      todayIn: number;
-      todayOut: number;
-      total: number;
-      metadata: Metadata;
-    };
-  } = useGetAllCashFlowQuery({
-    page,
-  }) as any;
-
-  console.log(data?.todayIn);
-
-  const authorized =
-    hasPermission(user!.permission, "SUPER_USER") ||
-    hasPermission(user!.permission, "ADMIN");
-
-  return (
-    <View style={styles.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#070E1A" />
-      <ScrollView
-        contentContainerStyle={styles.scroll}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>Halo, {user?.name}</Text>
-            <Text style={styles.subtitle}>
-              {new Date().toLocaleDateString("id-ID", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-            </Text>
+      <View style={styles.fixedContent}>
+        {/* Greeting Card */}
+        <View style={styles.greetCard}>
+          <View style={styles.shopIcon}>
+            <MaterialCommunityIcons name="store" size={32} color={ORANGE} />
           </View>
-          {
-            <View style={{ display: "flex", flexDirection: "row", gap: 6 }}>
-              <TouchableOpacity
-                style={styles.addBtn}
-                onPress={toggleReportModal}
-              >
-                <Text style={styles.addBtnText}>+ Laporan</Text>
-              </TouchableOpacity>
-            </View>
-          }
+          <View>
+            <Text style={styles.greetSub}>Selamat Datang,</Text>
+            <Text style={styles.greetName}>Admin</Text>
+          </View>
         </View>
 
-        {authorized && (
-          <View>
-            <View style={styles.balanceCard}>
-              <Text style={styles.balanceLabel}>SALDO BERSIH 🟢</Text>
-              <Text style={styles.balanceAmount}>
-                {formatRupiah(Number(data?.total) || 0)}
+        {/* Stats Grid */}
+        <View style={styles.statsGrid}>
+          <View style={[styles.statCard, { borderLeftColor: "#10B981" }]}>
+            <Text style={styles.statLabel}>Omset Hari Ini</Text>
+            <View style={styles.statRow}>
+              <Text style={[styles.statValue, { fontSize: 17 }]}>
+                {formatRupiah(dashboardData?.data?.omsetHariIni || 0)}
               </Text>
-              <View style={styles.balanceRow}>
-                <View style={styles.balanceSub}>
-                  <Text style={styles.balanceSubLabel}>Total Masuk 🟢</Text>
-                  <Text style={[styles.balanceSubVal]}>
-                    {formatRupiah(Number(data?.totalIn) || 0)}
-                  </Text>
-                </View>
-                <View style={styles.divider} />
-                <View style={styles.balanceSub}>
-                  <Text style={styles.balanceSubLabel}>Total Keluar 🔴</Text>
-                  <Text style={styles.balanceSubVal}>
-                    {formatRupiah(Number(data?.totalOut) || 0)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.todayRow}>
-              <View style={[styles.todayCard]}>
-                <Text style={styles.todayCardLabel}>Pemasukan Hari Ini 🟢</Text>
-                <Text style={styles.todayCardAmt}>
-                  {formatRupiah(Number(data?.todayIn) || 0)}
-                </Text>
-              </View>
-              <View style={[styles.todayCard]}>
-                <Text style={styles.todayCardLabel}>
-                  Pengeluaran Hari Ini 🔴
-                </Text>
-                <Text style={styles.todayCardAmt}>
-                  {formatRupiah(Number(data?.todayOut) || 0)}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>7 Hari Terakhir</Text>
-              <BarChart transactions={data?.data || []} />
+              <Ionicons name="cash-outline" size={28} color="#10B981" />
             </View>
           </View>
-        )}
-
-        {/* Transaction List */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Riwayat Transaksi</Text>
-
-          {data &&
-            data.data.map((cf: any) => (
-              <TxItem
-                key={cf.id}
-                tx={{
-                  ...cf,
-                  setDialogVisible: toggleViewDetailModal,
-                  setViewId,
-                }}
-              />
-            ))}
-          {data && (
-            <Pagination
-              metadata={data?.metadata}
-              onPageChange={(page: number) => setPage(page)}
-            />
-          )}
+          <View style={[styles.statCard, { borderLeftColor: "#8B5CF6" }]}>
+            <Text style={styles.statLabel}>Total Transaksi</Text>
+            <View style={styles.statRow}>
+              <Text style={styles.statValue}>
+                {dashboardData?.data?.totalTransaksi || 0}
+              </Text>
+              <Ionicons name="receipt-outline" size={28} color="#8B5CF6" />
+            </View>
+          </View>
         </View>
-      </ScrollView>
+      </View>
 
-      <ViewDetailModal id={viewId} />
-      <AddReportModal />
+      {/* ── Scrollable Cabang Section ── */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.cabangScroll}
+      >
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Semua Cabang</Text>
+          <TouchableOpacity
+            style={styles.lihatSemua}
+            onPress={() => navigation?.navigate("Cabang")}
+          >
+            <Text style={styles.lihatSemuaText}>Lihat Semua</Text>
+            <Ionicons name="chevron-forward" size={14} color={ORANGE} />
+          </TouchableOpacity>
+        </View>
+
+        {cabangTodayData?.data?.map((cabang: Cabang) => (
+          <TouchableOpacity
+            key={cabang.id}
+            style={styles.cabangCard}
+            activeOpacity={0.85}
+            onPress={() => navigation?.navigate("Cabang", { cabang })}
+          >
+            {/* Top row: icon + nama + status */}
+            <View style={styles.cabangTop}>
+              <View style={styles.cabangIconWrap}>
+                <MaterialCommunityIcons
+                  name="store-outline"
+                  size={22}
+                  color={ORANGE}
+                />
+              </View>
+              <Text style={styles.cabangNama} numberOfLines={1}>
+                {cabang?.name || ""}
+              </Text>
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor: !cabang.deletedAt ? "#D1FAE5" : "#FEE2E2",
+                  },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.statusText,
+                    {
+                      color: !cabang.deletedAt ? "#059669" : "#DC2626",
+                    },
+                  ]}
+                >
+                  {cabang.deletedAt ? "Tidak Aktif" : "Aktif"}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.divider} />
+
+            {/* Stats row: omset + transaksi */}
+            <View style={styles.cabangStats}>
+              <View style={styles.cabangStatItem}>
+                <View
+                  style={[styles.statIconWrap, { backgroundColor: "#ECFDF5" }]}
+                >
+                  <Ionicons name="cash-outline" size={16} color="#10B981" />
+                </View>
+                <View style={{ marginLeft: 8 }}>
+                  <Text style={styles.cabangStatLabel}>Omset Hari Ini</Text>
+                  <Text style={[styles.cabangStatValue, { color: "#10B981" }]}>
+                    {formatRupiah(Number(cabang?.totalOmset || "0"))}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.cabangStatDivider} />
+
+              <View style={styles.cabangStatItem}>
+                <View
+                  style={[styles.statIconWrap, { backgroundColor: "#F5F3FF" }]}
+                >
+                  <Ionicons name="receipt-outline" size={16} color="#8B5CF6" />
+                </View>
+                <View style={{ marginLeft: 8 }}>
+                  <Text style={styles.cabangStatLabel}>Transaksi</Text>
+                  <Text style={[styles.cabangStatValue, { color: "#8B5CF6" }]}>
+                    {cabang?.totalTransaksi || "0"}x
+                  </Text>
+                </View>
+              </View>
+            </View>
+
+            {/* Footer detail */}
+            <View style={styles.cabangFooter}>
+              <Text style={styles.detailLink}>Lihat Detail Cabang</Text>
+              <Ionicons name="arrow-forward" size={14} color={ORANGE} />
+            </View>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
     </View>
   );
 }
 
-// ── App Styles ────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#fff2de" },
-  scroll: { padding: 20, paddingBottom: 40 },
-
+  container: { flex: 1, backgroundColor: "#F5F5F5" },
   header: {
+    backgroundColor: ORANGE,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop:
+      Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) + 10 : 52,
+    paddingBottom: 14,
+    paddingHorizontal: 18,
+  },
+  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  fixedContent: { paddingHorizontal: 16, paddingTop: 16 },
+  cabangScroll: { paddingHorizontal: 16, paddingBottom: 40 },
+
+  greetCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 3,
+  },
+  shopIcon: { backgroundColor: "#FFF3EE", borderRadius: 10, padding: 10 },
+  greetSub: { color: "#888", fontSize: 13 },
+  greetName: { color: "#222", fontSize: 18, fontWeight: "700" },
+
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginBottom: 20,
+  },
+  statCard: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 14,
+    width: "47%",
+    borderLeftWidth: 4,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  statLabel: { color: "#888", fontSize: 12, marginBottom: 8 },
+  statRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  statValue: { fontSize: 28, fontWeight: "800", color: "#222" },
+
+  sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 12,
   },
-  greeting: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  subtitle: {
-    color: "#475569",
-    fontSize: 12,
-    marginTop: 2,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-  },
-  addBtn: {
-    backgroundColor: "#D96F32",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  logoutBtn: {
-    backgroundColor: "#d93232",
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  addBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
-  logoutBtnText: { color: "#fff", fontWeight: "700", fontSize: 14 },
+  sectionTitle: { fontSize: 16, fontWeight: "700", color: "#222" },
+  lihatSemua: { flexDirection: "row", alignItems: "center", gap: 2 },
+  lihatSemuaText: { fontSize: 13, color: ORANGE, fontWeight: "600" },
 
-  balanceCard: {
-    backgroundColor: "#c75d2c4d",
-    borderColor: "#c75d2c3a",
-    borderRadius: 20,
-    padding: 24,
-    marginBottom: 16,
-    borderWidth: 1,
+  cabangCard: {
+    backgroundColor: "#fff",
+    borderRadius: 14,
+    padding: 14,
+    marginBottom: 14,
+    shadowColor: "#000",
+    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    elevation: 3,
   },
-  balanceLabel: {
-    fontSize: 14,
-    letterSpacing: 1,
-    fontWeight: "500",
+  cabangTop: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginBottom: 12,
   },
-  balanceAmount: {
-    fontSize: 16,
-    marginTop: 4,
-    marginBottom: 20,
-    fontWeight: "300",
+  cabangIconWrap: { backgroundColor: "#FFF3EE", borderRadius: 8, padding: 8 },
+  cabangNama: { flex: 1, fontSize: 14, fontWeight: "700", color: "#222" },
+  statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
+  statusText: { fontSize: 11, fontWeight: "700" },
+
+  divider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 12 },
+
+  cabangStats: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 10,
   },
-  balanceRow: { flexDirection: "row", alignItems: "center" },
-  balanceSub: { flex: 1 },
-  balanceSubLabel: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
-  balanceSubVal: {
-    fontSize: 16,
-    fontWeight: "300",
-    marginTop: 4,
-  },
-  divider: {
+  cabangStatItem: { flexDirection: "row", alignItems: "center", flex: 1 },
+  statIconWrap: { borderRadius: 8, padding: 7 },
+  cabangStatLabel: { fontSize: 10, color: "#9CA3AF", marginBottom: 2 },
+  cabangStatValue: { fontSize: 13, fontWeight: "700", color: "#374151" },
+  cabangStatDivider: {
     width: 1,
-    height: 36,
-    backgroundColor: "#1E293B",
-    marginHorizontal: 16,
+    height: 34,
+    backgroundColor: "#E5E7EB",
+    marginHorizontal: 12,
   },
 
-  todayRow: { flexDirection: "row", gap: 12, marginBottom: 16 },
-  todayCard: {
-    flex: 1,
-    backgroundColor: "#c75d2c4d",
-    borderColor: "#c75d2c3a",
-    borderRadius: 16,
-    padding: 16,
+  stokWarning: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFFBEB",
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    gap: 5,
+    marginBottom: 10,
     borderWidth: 1,
+    borderColor: "#FDE68A",
   },
-  todayCardLabel: {
-    fontSize: 11,
-    letterSpacing: 1,
-    fontWeight: "500",
-  },
-  todayCardAmt: {
-    fontSize: 16,
-    fontWeight: "300",
-    marginTop: 6,
-  },
+  stokWarningText: { fontSize: 11, color: "#D97706", fontWeight: "500" },
 
-  card: {
-    backgroundColor: "#c75d2c4d",
-    borderColor: "#c75d2c3a",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
+  cabangFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 4,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
   },
-  cardTitle: {
-    fontSize: 12,
-    letterSpacing: 1,
-    marginBottom: 16,
-    fontWeight: "500",
-  },
-
-  filterRow: { flexDirection: "row", gap: 8, marginBottom: 8 },
-  filterBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#c75d2c3a",
-    backgroundColor: "#fff2de9d",
-  },
-  filterBtnActive: { backgroundColor: "#D96F32" },
-  filterText: { color: "#64748B", fontSize: 12, fontWeight: "600" },
-  filterTextActive: { color: "#fff" },
-  emptyText: {
-    color: "#475569",
-    textAlign: "center",
-    paddingVertical: 20,
-    fontFamily: Platform.OS === "ios" ? "Courier New" : "monospace",
-  },
+  detailLink: { fontSize: 12, color: ORANGE, fontWeight: "600" },
 });

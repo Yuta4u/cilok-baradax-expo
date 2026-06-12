@@ -88,6 +88,29 @@ interface Metadata {
   totalPages: number;
 }
 
+interface AddProduct {
+  name: string;
+  minimalStock: number;
+  price: number;
+}
+
+interface Cabang {
+  id: string;
+  name: string;
+  totalTransaksi: string;
+  totalOmset: string;
+  deletedAt?: string;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  stock: 0;
+  minimalStock: 0;
+  uom: string;
+  status: boolean;
+}
+
 interface AddUser {
   name: string;
   email: string;
@@ -104,12 +127,6 @@ interface AddIngredient {
   name: string;
   uom: string;
   price: number;
-  icon: string;
-}
-
-interface AddProduct {
-  name: string;
-  uom: string;
   icon: string;
 }
 

@@ -70,6 +70,34 @@ export async function addUserApi(payload: AddUser) {
   return data;
 }
 
+export async function changePassword(payload: {
+  id: string;
+  password: string;
+}) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/user/change-password`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
 export async function setActiveApi(payload: { id: string; active: number }) {
   const { accessToken } = useAuthStore.getState();
 

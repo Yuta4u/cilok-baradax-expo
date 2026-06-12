@@ -1,394 +1,414 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
+  StyleSheet,
   FlatList,
   TextInput,
   TouchableOpacity,
-  StyleSheet,
-  ActivityIndicator,
+  SafeAreaView,
+  StatusBar,
+  Platform,
+  Modal,
+  Alert,
 } from "react-native";
-import PageLayout from "../../src/components/layout";
-import InventoryCard from "../../src/components/card/inventory.card";
-import { useInventoryStore } from "../../src/store/inventory.store";
+import { Ionicons } from "@expo/vector-icons";
 import {
-  useGetAllIngredientQuery,
-  useGetAllProducttQuery,
+  useProductMutation,
+  useProductQuery,
 } from "../../src/services/queries/inventory";
-import {
-  AddIngredientModal,
-  AddIngredientModalBtn,
-} from "../../src/components/modal/add-ingredient.modal";
-import { AddStockModal } from "../../src/components/modal/add-stock.modal";
-import { SubtractStockModal } from "../../src/components/modal/subtract-stock.modal";
-import {
-  AddProductModal,
-  AddProductModalBtn,
-} from "../../src/components/modal/add-product.modal";
-import debounce from "lodash/debounce";
-import { EditMinimalStockModal } from "../../src/components/modal/edit-minimal-stock.modal";
-import ProductCard from "../../src/components/card/product.card";
-import { StockInProductModal } from "../../src/components/modal/stock-in-product.modal";
-import { StockOutProductModal } from "../../src/components/modal/stock-out-product.modal";
+import { useQueryClient } from "@tanstack/react-query";
+import { ToastSuccess } from "../../src/utils/toast";
 
-const FILTERS = [
-  { key: "ingredient", label: "Ingredient" },
-  { key: "product", label: "Product" },
-];
+const BRAND = "#B94A1C";
+const FILTER_OPTIONS = ["Semua", "Aman", "Menipis"];
 
-export default function InventoryScreen({ navigation }: any) {
-  const [filter, setFilter] = useState("ingredient");
-  const [data, setData] = useState<Ingredient[] | []>([]);
-
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const handleSearch = useMemo(
-    () => debounce((text: string) => setDebouncedSearch(text), 300),
-    [],
+const StatusBadge: React.FC<{ status: boolean }> = ({ status }) => {
+  return (
+    <View
+      style={[badge.wrap, { backgroundColor: status ? "#ECFDF5" : "#FFF7ED" }]}
+    >
+      <Text style={[badge.text, { color: status ? "#059669" : "#EA580C" }]}>
+        {status ? "Aman" : "Menipis"}
+      </Text>
+    </View>
   );
+};
 
-  const onChangeText = (text: string) => {
-    setSearch(text);
-    handleSearch(text);
+const badge = StyleSheet.create({
+  wrap: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
+  text: { fontSize: 12, fontWeight: "600" },
+});
+
+export default function DataStokScreen() {
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState<"Semua" | "Aman" | "Menipis">("Semua");
+  const [modalVisible, setModalVisible] = useState(false);
+
+  const { data: product } = useProductQuery(type, search);
+  const { mutate: addProduct } = useProductMutation();
+
+  // Form state
+  const [name, setName] = useState("");
+  const [minimalStock, setMinimalStock] = useState("");
+  const [price, setPrice] = useState("");
+
+  const resetForm = () => {
+    setName("");
+    setMinimalStock("");
+    setPrice("");
   };
 
-  const {
-    addIngredientModal,
-    addProductModal,
-    addStockModal,
-    stockInProductModal,
-    stockOutProductModal,
-    subtractStockModal,
-    editMinimalStockModal,
-    toggleAddIngredientModal,
-    toggleAddProductModal,
-    toggleAddStockModal,
-    toggleSubtractStockModal,
-    toggleEditMinimalStockModal,
-    toggleStockInProductModal,
-    toggleStockOutProductModal,
-  } = useInventoryStore();
-  const {
-    data: ingredients,
-    isPending: loadingIngredient,
-    refetch: refetchIngredient,
-  } = useGetAllIngredientQuery(debouncedSearch);
-  const {
-    data: products,
-    isPending: loadingProduct,
-    refetch: refetchProduct,
-  } = useGetAllProducttQuery(debouncedSearch);
+  const handleTambah = () => {
+    if (!name.trim() || !minimalStock) {
+      Alert.alert("Lengkapi Data", "Nama produk dan stok harus diisi.");
+      return;
+    }
 
-  useEffect(() => {
-    if (filter === "ingredient") refetchIngredient();
-    if (filter === "product") refetchProduct();
-  }, [filter, debouncedSearch]);
+    const payload = {
+      name,
+      minimalStock: Number(minimalStock),
+      price: Number(price),
+    };
 
-  useEffect(() => {
-    if (filter === "ingredient") setData(ingredients || []);
-    if (filter === "product") setData(products || []);
-  }, [filter, ingredients, products]);
+    addProduct(payload, {
+      onSuccess: () => {
+        setModalVisible(false);
+        setTimeout(() => {
+          resetForm();
+          ToastSuccess("Produk berhasil ditambahkan");
+          queryClient.invalidateQueries({ queryKey: ["inventory:product"] });
+        }, 300);
+      },
+    });
+  };
 
-  useEffect(() => {
-    return () => handleSearch.cancel();
-  }, [handleSearch]);
-
-  const loading = loadingIngredient || loadingProduct;
+  const renderItem = ({ item, index }: { item: Product; index: number }) => {
+    return (
+      <View style={[s.row, index % 2 === 0 ? s.rowEven : s.rowOdd]}>
+        <Text style={s.colProduk} numberOfLines={2}>
+          {item.name}
+        </Text>
+        <Text style={s.colStok}>{item.stock}</Text>
+        <Text style={s.colSatuan}>{item.uom}</Text>
+        <View style={s.colStatus}>
+          <StatusBadge status={item.status} />
+        </View>
+      </View>
+    );
+  };
 
   return (
-    <PageLayout title="Inventory" sub="Supplay Chain Management">
-      <View
-        style={{
-          width: "auto",
-          margin: 14,
-          marginBottom: 0,
-          display: "flex",
-          flexDirection: "row",
-          flexWrap: "wrap",
-          gap: 8,
-        }}
-      >
-        <AddIngredientModalBtn />
-        <AddProductModalBtn />
-      </View>
-      {/* Search */}
-      <View style={styles.searchContainer}>
-        <Text style={styles.searchIcon}>🔍</Text>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Cari item inventaris..."
-          placeholderTextColor="#9CA3AF"
-          value={search}
-          onChangeText={onChangeText}
-        />
+    <SafeAreaView style={s.safe}>
+      <StatusBar backgroundColor={BRAND} barStyle="light-content" />
+
+      {/* Header */}
+      <View style={s.header}>
+        <View style={{ width: 36 }} />
+        <Text style={s.headerTitle}>Data Stok</Text>
+        <TouchableOpacity
+          style={s.headerBtn}
+          onPress={() => setModalVisible(true)}
+        >
+          <Ionicons name="add" size={26} color="#fff" />
+        </TouchableOpacity>
       </View>
 
-      {/* Filter tabs */}
-      <View style={styles.filterRow}>
-        {FILTERS.map((f) => (
+      {/* Search */}
+      <View style={s.searchRow}>
+        <View style={s.searchBox}>
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color="#9CA3AF"
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Cari produk..."
+            placeholderTextColor="#9CA3AF"
+            value={search}
+            onChangeText={setSearch}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity onPress={() => setSearch("")}>
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <TouchableOpacity style={s.filterIcon}>
+          <Ionicons name="filter-outline" size={20} color="#6B7280" />
+        </TouchableOpacity>
+      </View>
+
+      {/* Filter Chips */}
+      <View style={s.chips}>
+        {FILTER_OPTIONS.map((f) => (
           <TouchableOpacity
-            key={f.key}
-            style={[
-              styles.filterBtn,
-              filter === f.key && styles.filterBtnActive,
-            ]}
-            onPress={() => setFilter(f.key)}
+            key={f}
+            style={[s.chip, type === f && s.chipActive]}
+            onPress={() => setType(f as never)}
           >
-            <Text
-              style={[
-                styles.filterText,
-                filter === f.key && styles.filterTextActive,
-              ]}
-            >
-              {f.label}
+            <Text style={[s.chipText, type === f && s.chipTextActive]}>
+              {f}
             </Text>
           </TouchableOpacity>
         ))}
+        <Text style={s.countText}> produk</Text>
       </View>
 
-      {/* Item list */}
+      {/* Table Header */}
+      <View style={s.tableHeader}>
+        <Text style={[s.colProduk, s.th]}>Produk</Text>
+        <Text style={[s.colStok, s.th]}>Stok</Text>
+        <Text style={[s.colSatuan, s.th]}>Satuan</Text>
+        <Text style={[s.colStatus, s.th]}>Status</Text>
+      </View>
+
       <FlatList
-        data={data || []}
+        data={product?.data || []}
         keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) =>
-          filter === "ingredient" ? (
-            <InventoryCard item={item} />
-          ) : (
-            <ProductCard item={item} />
-          )
-        }
+        renderItem={renderItem}
+        contentContainerStyle={{ paddingBottom: 20 }}
         ListEmptyComponent={
-          loading ? (
-            <View style={styles.emptyWrap}>
-              <ActivityIndicator size="large" color="#0000ff" />
-            </View>
-          ) : (
-            <View style={styles.emptyWrap}>
-              <Text style={styles.emptyText}>Tidak ada item ditemukan</Text>
-            </View>
-          )
+          <View style={s.empty}>
+            <Ionicons name="cube-outline" size={48} color="#D1D5DB" />
+            <Text style={s.emptyText}>Tidak ada produk ditemukan</Text>
+          </View>
         }
       />
 
-      {/* FAB tambah item */}
-      <TouchableOpacity
-        style={styles.fab}
-        onPress={() => navigation.navigate("TambahItem")}
-      >
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      {/* Modal Tambah Produk */}
+      <Modal visible={modalVisible} animationType="slide" transparent>
+        <View style={m.overlay}>
+          <View style={m.sheet}>
+            <View style={m.sheetHeader}>
+              <Text style={m.sheetTitle}>Tambah Produk</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  resetForm();
+                  setModalVisible(false);
+                }}
+              >
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
 
-      {/* add ingredient  */}
-      {addIngredientModal && (
-        <AddIngredientModal
-          visible={addIngredientModal}
-          onClose={toggleAddIngredientModal}
-        />
-      )}
+            <Text style={m.label}>
+              Nama Produk <Text style={{ color: BRAND }}>*</Text>
+            </Text>
+            <TextInput
+              style={m.input}
+              placeholder="Contoh: Cilok Original"
+              placeholderTextColor="#9CA3AF"
+              value={name}
+              onChangeText={setName}
+            />
 
-      {/* add product  */}
-      {addProductModal && (
-        <AddProductModal
-          visible={addProductModal}
-          onClose={toggleAddProductModal}
-        />
-      )}
+            <Text style={m.label}>
+              Jumlah Minimal Stock <Text style={{ color: BRAND }}>*</Text>
+            </Text>
+            <TextInput
+              style={m.input}
+              placeholder="0"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="numeric"
+              value={minimalStock}
+              onChangeText={setMinimalStock}
+            />
 
-      {stockInProductModal && (
-        <StockInProductModal
-          visible={stockInProductModal}
-          onClose={toggleStockInProductModal}
-        />
-      )}
+            <Text style={m.label}>
+              Price <Text style={{ color: BRAND }}>*</Text>
+            </Text>
+            <TextInput
+              style={m.input}
+              placeholder="0"
+              placeholderTextColor="#9CA3AF"
+              keyboardType="numeric"
+              value={price}
+              onChangeText={setPrice}
+            />
 
-      {stockOutProductModal && (
-        <StockOutProductModal
-          visible={stockOutProductModal}
-          onClose={toggleStockOutProductModal}
-        />
-      )}
-
-      {/* edit minimal stock */}
-      {editMinimalStockModal && (
-        <EditMinimalStockModal
-          visible={editMinimalStockModal}
-          onClose={toggleEditMinimalStockModal}
-        />
-      )}
-
-      {/* add stock  */}
-      {addStockModal && (
-        <AddStockModal visible={addStockModal} onClose={toggleAddStockModal} />
-      )}
-
-      {/* subtract stock  */}
-      {subtractStockModal && (
-        <SubtractStockModal
-          visible={subtractStockModal}
-          onClose={toggleSubtractStockModal}
-        />
-      )}
-    </PageLayout>
+            <TouchableOpacity style={m.saveBtn} onPress={handleTambah}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={20}
+                color="#fff"
+              />
+              <Text style={m.saveBtnText}>Simpan Produk</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
+// ─── Styles ───────────────────────────────────────────────────────────────────
+
+const s = StyleSheet.create({
+  safe: {
     flex: 1,
-    backgroundColor: "#F3F4F6",
+    backgroundColor: "#F9FAFB",
+    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0,
   },
-  headerSub: {
-    fontSize: 10,
-    color: "rgba(255,255,255,0.7)",
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    textTransform: "uppercase",
+  header: {
+    backgroundColor: BRAND,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+  },
+  headerBtn: {
+    width: 36,
+    height: 36,
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: 8,
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: "800",
     color: "#fff",
-    marginTop: 2,
+    fontSize: 18,
+    fontWeight: "700",
+    letterSpacing: 0.3,
   },
-  headerDesc: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.6)",
-    marginTop: 2,
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 8,
+    gap: 10,
   },
-  riwayatBtn: {
-    backgroundColor: "rgba(255,255,255,0.2)",
-    borderRadius: 24,
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  searchInput: { flex: 1, fontSize: 14, color: "#111827", padding: 0 },
+  filterIcon: {
     width: 42,
     height: 42,
+    backgroundColor: "#fff",
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-  },
-  riwayatBtnText: { fontSize: 20 },
-  alertBanner: {
-    backgroundColor: "rgba(239,68,68,0.12)",
-    borderColor: "#EF4444",
     borderWidth: 1,
-    marginHorizontal: 16,
-    marginTop: -16,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderColor: "#E5E7EB",
   },
-  alertText: {
-    color: "#B91C1C",
-    fontWeight: "700",
-    fontSize: 12,
-  },
-  statsRow: {
-    flexDirection: "row",
-    gap: 10,
-    marginHorizontal: 16,
-    marginTop: 12,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: "#fff",
-    borderRadius: 14,
-    paddingVertical: 12,
-    alignItems: "center",
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  statValue: {
-    fontSize: 20,
-    fontWeight: "800",
-  },
-  statLabel: {
-    fontSize: 10,
-    color: "#9CA3AF",
-    fontWeight: "500",
-    marginTop: 2,
-    textAlign: "center",
-  },
-  searchContainer: {
+  chips: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
-    marginHorizontal: 16,
-    marginTop: 14,
-    borderRadius: 14,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-  },
-  searchIcon: { fontSize: 16, marginRight: 8 },
-  searchInput: {
-    flex: 1,
-    fontSize: 13,
-    color: "#1F2937",
-    paddingVertical: 10,
-  },
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
     paddingHorizontal: 16,
-    marginTop: 12,
+    paddingBottom: 12,
+    gap: 8,
+  },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  chipActive: { backgroundColor: BRAND, borderColor: BRAND },
+  chipText: { fontSize: 13, color: "#6B7280", fontWeight: "500" },
+  chipTextActive: { color: "#fff" },
+  countText: { marginLeft: "auto", fontSize: 12, color: "#9CA3AF" },
+  tableHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  th: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#374151",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  row: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    borderBottomWidth: 1,
+    borderBottomColor: "#F3F4F6",
+  },
+  rowEven: { backgroundColor: "#fff" },
+  rowOdd: { backgroundColor: "#FAFAFA" },
+  colProduk: { flex: 2.5, fontSize: 14, color: "#111827", fontWeight: "500" },
+  colStok: { flex: 1, fontSize: 14, color: "#374151", textAlign: "center" },
+  colSatuan: { flex: 1, fontSize: 14, color: "#6B7280", textAlign: "center" },
+  colStatus: { flex: 1.2, alignItems: "flex-end", paddingLeft: 45 },
+  empty: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingTop: 60,
+    gap: 12,
+  },
+  emptyText: { fontSize: 14, color: "#9CA3AF" },
+});
+
+const m = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.4)",
+    justifyContent: "flex-end",
+  },
+  sheet: {
+    backgroundColor: "#fff",
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 12,
+  },
+  sheetHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 4,
   },
-  filterBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: "#F3E9DC",
-  },
-  filterBtnActive: {
-    backgroundColor: "#D96F32",
-  },
-  filterText: {
-    fontSize: 11,
+  sheetTitle: { fontSize: 17, fontWeight: "700", color: "#111827" },
+  label: {
+    fontSize: 13,
     fontWeight: "600",
-    color: "#6B7280",
+    color: "#374151",
+    marginBottom: -4,
   },
-  filterTextActive: {
-    color: "#fff",
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-    paddingBottom: 100,
-  },
-  emptyWrap: {
-    alignItems: "center",
-    paddingVertical: 40,
-  },
-  emptyText: {
-    color: "#9CA3AF",
+  input: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 8,
+    padding: 11,
     fontSize: 14,
+    color: "#111827",
+    backgroundColor: "#FAFAFA",
   },
-  fab: {
-    position: "absolute",
-    bottom: 28,
-    right: 20,
-    backgroundColor: "#6C3DE8",
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  saveBtn: {
+    backgroundColor: BRAND,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    elevation: 8,
-    shadowColor: "#6C3DE8",
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 4,
   },
-  fabText: {
-    color: "#fff",
-    fontSize: 28,
-    fontWeight: "300",
-    lineHeight: 32,
-  },
+  saveBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });
