@@ -13,30 +13,29 @@ import {
 } from "react-native";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useCabangTodayQuery } from "../../src/services/queries/dashboard";
+import { useProductQuery } from "../../src/services/queries/inventory";
+import {
+  useCashFlowDetailMutation,
+  useCashFlowMutation,
+} from "../../src/services/queries/stock-management";
+import { ToastSuccess } from "../../src/utils/toast";
+import { handleError } from "../../src/utils/error";
 
 const ORANGE = "#B94A1A";
 
-export default function DashboardScreen({ navigation }: any) {
+export default function StockManagement() {
   const { data: cabangTodayData } = useCabangTodayQuery();
+  const { data: product } = useProductQuery("Semua", "");
+  const { mutate: addCashFlow } = useCashFlowMutation();
+  const { mutate: cabangTodayDetailData } = useCashFlowDetailMutation();
 
-  // ================= STATE =================
   const [stockModalVisible, setStockModalVisible] = useState(false);
+  const [detailStockVisible, setDetailStockVisible] = useState(false);
   const [selectedCabang, setSelectedCabang] = useState<any>(null);
-  const [stockInput, setStockInput] = useState<Record<number, string>>({});
-
-  // dummy product (max 10)
-  const products = [
-    { id: 1, name: "Product A" },
-    { id: 2, name: "Product B" },
-    { id: 3, name: "Product C" },
-    { id: 4, name: "Product D" },
-    { id: 5, name: "Product E" },
-    { id: 6, name: "Product F" },
-    { id: 7, name: "Product G" },
-    { id: 8, name: "Product H" },
-    { id: 9, name: "Product I" },
-    { id: 10, name: "Product J" },
-  ];
+  const [stockInput, setStockInput] = useState<
+    Record<number, { qty: string; price: string }>
+  >({});
+  const [stockInputDetail, setStockInputDetail] = useState<any>([]);
 
   const openStockModal = (cabang: any) => {
     setSelectedCabang(cabang);
@@ -44,22 +43,36 @@ export default function DashboardScreen({ navigation }: any) {
     setStockModalVisible(true);
   };
 
+  const openDetailStockModal = (cabang: any) => {
+    setSelectedCabang(cabang);
+    setDetailStockVisible(true);
+    cabangTodayDetailData(cabang.id, {
+      onSuccess: ({ data }) => {
+        setStockInputDetail(data);
+      },
+    });
+  };
+
   const submitStock = () => {
     const payload = {
-      cabangId: selectedCabang?.id,
-      items: Object.entries(stockInput)
-        .filter(([_, qty]) => qty && Number(qty) > 0)
-        .map(([productId, qty]) => ({
-          productId: Number(productId),
-          qty: Number(qty),
-        })),
+      id: selectedCabang.id,
+      cashFlowItems: stockInput,
     };
 
-    console.log("SUBMIT STOCK:", payload);
-
-    setStockModalVisible(false);
-    setStockInput({});
-    setSelectedCabang(null);
+    addCashFlow(payload, {
+      onSuccess: ({ message }) => {
+        ToastSuccess(message);
+        setStockModalVisible(false);
+        setStockInput({});
+        setSelectedCabang(null);
+      },
+      onError: (err) => {
+        setStockModalVisible(false);
+        setStockInput({});
+        setSelectedCabang(null);
+        handleError(err as never);
+      },
+    });
   };
 
   return (
@@ -136,9 +149,7 @@ export default function DashboardScreen({ navigation }: any) {
               </TouchableOpacity>
 
               {/* DETAIL STOCK */}
-              <TouchableOpacity
-                onPress={() => navigation?.navigate("CabangDetail", { cabang })}
-              >
+              <TouchableOpacity onPress={() => openDetailStockModal(cabang)}>
                 <Text style={styles.detailText}>Detail Stock →</Text>
               </TouchableOpacity>
             </View>
@@ -146,7 +157,6 @@ export default function DashboardScreen({ navigation }: any) {
         ))}
       </ScrollView>
 
-      {/* ================= MODAL STOCK ================= */}
       <Modal visible={stockModalVisible} animationType="slide">
         <View style={styles.modal}>
           {/* HEADER MODAL */}
@@ -156,7 +166,7 @@ export default function DashboardScreen({ navigation }: any) {
 
           {/* PRODUCT LIST */}
           <FlatList
-            data={products}
+            data={product?.data || []}
             keyExtractor={(item) => item.id.toString()}
             contentContainerStyle={{ paddingBottom: 20 }}
             renderItem={({ item }) => (
@@ -167,12 +177,14 @@ export default function DashboardScreen({ navigation }: any) {
                   keyboardType="numeric"
                   placeholder="Qty"
                   style={styles.input}
-                  value={stockInput[item.id] || ""}
+                  value={stockInput[item.id]?.qty || ""}
                   onChangeText={(val) =>
-                    setStockInput((prev) => ({
-                      ...prev,
-                      [item.id]: val,
-                    }))
+                    setStockInput((prev) => {
+                      return {
+                        ...prev,
+                        [item.id]: { qty: val, price: item.price },
+                      };
+                    })
                   }
                 />
               </View>
@@ -187,6 +199,69 @@ export default function DashboardScreen({ navigation }: any) {
           {/* CLOSE */}
           <TouchableOpacity
             onPress={() => setStockModalVisible(false)}
+            style={{ marginTop: 12 }}
+          >
+            <Text style={styles.closeText}>Tutup</Text>
+          </TouchableOpacity>
+        </View>
+      </Modal>
+
+      <Modal visible={detailStockVisible} animationType="slide">
+        <View style={styles.modal}>
+          <Text style={styles.modalTitle}>
+            Detail Stock - {selectedCabang?.name}
+          </Text>
+
+          {!stockInputDetail?.length ? (
+            <Text>Cash flow is empty, please input stock first.</Text>
+          ) : null}
+
+          {/* PRODUCT LIST */}
+          {stockInputDetail?.length ? (
+            <FlatList
+              data={product?.data || []}
+              keyExtractor={(item) => item.id.toString()}
+              contentContainerStyle={{ paddingBottom: 20 }}
+              renderItem={({ item }) => (
+                <View style={styles.productRow}>
+                  <Text style={styles.productName}>{item.name}</Text>
+
+                  <TextInput
+                    keyboardType="numeric"
+                    placeholder="Qty"
+                    style={styles.input}
+                    value={stockInput[item.id]?.qty || ""}
+                    onChangeText={(val) =>
+                      setStockInput((prev) => {
+                        return {
+                          ...prev,
+                          [item.id]: { qty: val, price: item.price },
+                        };
+                      })
+                    }
+                  />
+                </View>
+              )}
+            />
+          ) : null}
+
+          {/* SAVE */}
+          {stockInputDetail?.length ? (
+            <TouchableOpacity
+              style={styles.saveBtn}
+              onPress={submitStock}
+              disabled={!stockInputDetail.length}
+            >
+              <Text style={styles.saveText}>Simpan Stock</Text>
+            </TouchableOpacity>
+          ) : null}
+
+          {/* CLOSE */}
+          <TouchableOpacity
+            onPress={() => {
+              setStockInputDetail([]);
+              setDetailStockVisible(false);
+            }}
             style={{ marginTop: 12 }}
           >
             <Text style={styles.closeText}>Tutup</Text>
