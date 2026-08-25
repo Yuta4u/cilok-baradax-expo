@@ -75,9 +75,6 @@ export const AddReportModal = () => {
 
   const handleCancel = () => {
     queryClient.removeQueries({ queryKey: ["cash-flow:byId"] });
-    console.log(
-      queryClient.getQueryCache().findAll({ queryKey: ["cash-flow:all"] }),
-    );
     queryClient.invalidateQueries({ queryKey: ["cash-flow:all"] });
     handleReset();
     toggleReportModal();

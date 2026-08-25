@@ -94,12 +94,30 @@ interface AddProduct {
   price: number;
 }
 
+interface UpdateStock {
+  id: string;
+  quantity: number;
+  type: "inc" | "dec";
+  note: string;
+}
+
+type CashFlowDetail = {
+  id: number | string;
+  productId?: number | string;
+  qty?: number;
+  in?: number;
+  price?: number;
+  name?: string;
+  product?: { id?: number | string; name?: string; price?: number };
+};
+
 interface Cabang {
   id: string;
   name: string;
   totalTransaksi: string;
   totalOmset: string;
   deletedAt?: string;
+  verified: number;
 }
 
 interface Product {
@@ -149,6 +167,50 @@ interface BaseParams {
   limit?: number;
   q?: string;
   type?: string;
+}
+
+interface ICashFlow {
+  id: string;
+  createdAt: string;
+  in: number;
+  out: number;
+  note: string;
+  verified: 0 | 1 | 2;
+  user: IUser;
+  cashFlowItems: ICashFlowItem[];
+}
+
+interface ICashFlowItem {
+  id: string;
+  in: number;
+  out?: number;
+  price: number;
+  totalPrice: number;
+  cashFlow: ICashFlow;
+  product: IProduct;
+}
+
+interface IProduct {
+  name: string;
+  uom: string;
+  stock: number;
+  minimalStock: number;
+  price: number;
+  cashFlowItems: ICashFlowItem[];
+}
+
+interface IUser {
+  name: string;
+  email: string;
+  password: string;
+  stockCilok: number;
+  permission: number;
+}
+
+interface IHistory {
+  qty: number;
+  note: string;
+  product: IProduct;
 }
 
 interface CashFlow {

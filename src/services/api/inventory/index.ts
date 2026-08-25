@@ -98,3 +98,28 @@ export async function addProduct(payload: AddProduct) {
 
   return data;
 }
+
+export async function updateStockProduct(payload: UpdateStock) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/product/stock`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}

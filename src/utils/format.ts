@@ -20,6 +20,22 @@ export const formatRupiah = (value: string): string => {
   return "Rp " + angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
+export const formatRupiah2 = (value: string): string => {
+  const sanitizedValue = value.replace(/[^0-9,]/g, "");
+
+  const [integerPart, decimalPart] = sanitizedValue.split(",");
+
+  const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  return decimalPart !== undefined
+    ? `${formattedInteger},${decimalPart}`
+    : formattedInteger;
+};
+
+export function deFormatRupiah2(value: string): number {
+  return Number(value.replace(/\./g, "").replace(",", "."));
+}
+
 // Fungsi untuk mengambil nilai angka murni
 export const parseRupiah = (formatted: string): number => {
   return parseInt(formatted.replace(/\D/g, ""), 10) || 0;

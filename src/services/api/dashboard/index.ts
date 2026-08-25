@@ -1,6 +1,30 @@
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
 
+export async function getHistory() {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/history`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
 export async function getCabangToday() {
   const { accessToken } = useAuthStore.getState();
 
@@ -155,7 +179,6 @@ export async function addReportApi(payload: AddReport) {
     },
   );
   const data = await res.json();
-  console.log(data, "test");
 
   if (!res.ok) {
     ToastError(data.message || "Something went wrong, please try again later.");
@@ -169,6 +192,29 @@ export async function confirmReportApi(payload: ConfirmReport) {
 
   const res = await fetch(
     `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/confirm`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+  return data;
+}
+
+export async function submitCashFlow(payload: any) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/submit`,
     {
       method: "PUT",
       headers: {

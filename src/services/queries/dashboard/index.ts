@@ -8,22 +8,36 @@ import {
   getCabangToday,
   getCashFlowByIdApi,
   getDashboard,
+  getHistory,
   getViewCashFlowApi,
+  submitCashFlow,
 } from "../../api/dashboard";
 
-export const useDashboardQuery = () => {
+export const useDashboardQuery = (enabled: boolean) => {
   return useQuery({
     queryKey: ["dashboard:all"],
     queryFn: getDashboard,
+    enabled,
     refetchOnMount: true,
     retryOnMount: true,
   });
 };
 
-export const useCabangTodayQuery = () => {
+export const useCabangHistoryQuery = (enabled: boolean) => {
   return useQuery({
-    queryKey: ["cabang:today"],
+    queryKey: ["cash-flow:history"],
+    queryFn: getHistory,
+    enabled,
+    refetchOnMount: true,
+    retryOnMount: true,
+  });
+};
+
+export const useCabangTodayQuery = (enabled: boolean) => {
+  return useQuery({
+    queryKey: ["cash-flow:cabang:today"],
     queryFn: getCabangToday,
+    enabled,
     refetchOnMount: true,
     retryOnMount: true,
   });
@@ -78,6 +92,13 @@ export const useAddReportMutation = () => {
 export const useConfirmReportMutation = () => {
   return useMutation({
     mutationFn: confirmReportApi,
+    onError: handleError,
+  });
+};
+
+export const useSubmitCashFlowMutation = () => {
+  return useMutation({
+    mutationFn: submitCashFlow,
     onError: handleError,
   });
 };
