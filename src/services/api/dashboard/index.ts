@@ -95,6 +95,31 @@ export async function addCashFlow(payload: AddCashFlow) {
   return data;
 }
 
+export async function approvalCashFlow(payload: AddCashFlow) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/approval`,
+    {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
 export async function getAllCashFlowApi(payload: BaseParams) {
   const { accessToken } = useAuthStore.getState();
 

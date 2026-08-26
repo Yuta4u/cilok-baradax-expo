@@ -18,6 +18,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import {
+  useApprovalCashFlowMutation,
   useCabangHistoryQuery,
   useCabangTodayQuery,
   useDashboardQuery,
@@ -28,6 +29,7 @@ import { enumeratePermission } from "../../src/utils/permissions";
 import { ToastError, ToastSuccess } from "../../src/utils/toast";
 import { handleError } from "../../src/utils/error";
 import { useQueryClient } from "@tanstack/react-query";
+import { on } from "node:cluster";
 
 const ORANGE = "#B94A1A";
 const ORANGE_SOFT = "#FFF3EE";
@@ -169,7 +171,7 @@ const CashFlowCard = React.memo(function CabangCard({
   const omsetTodayObj = {
     2: "Submit First",
     1: "Approval",
-    0: omset,
+    0: formatRupiah(omset),
   };
 
   return (
@@ -291,6 +293,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
   const { data: cabangTodayData, isLoading: loadingCabangToday } =
     useCabangTodayQuery(isAdmin);
+  const { mutate: approvalCashFlow } = useApprovalCashFlowMutation();
 
   const [selectedCabang, setSelectedCabang] = useState<ICashFlow | null>(null);
 
@@ -323,6 +326,7 @@ export default function DashboardScreen({ navigation }: Props) {
       },
       {},
     );
+
     setTrxItems(cashFlow.cashFlowItems);
     setTrxInput(seed);
     setTrxBaseline(seed);
@@ -361,14 +365,6 @@ export default function DashboardScreen({ navigation }: Props) {
     setTrxInput((prev) => ({ ...prev, [String(id)]: qty }));
   }, []);
 
-  const trxDirty = useMemo(
-    () =>
-      Object.keys(trxBaseline).some(
-        (key) => toNumber(trxInput[key]) !== toNumber(trxBaseline[key]),
-      ),
-    [trxBaseline, trxInput],
-  );
-
   const buildPayload = () =>
     trxItems.reduce<Record<string, { qty: number; price: number }>>(
       (acc, item) => {
@@ -388,7 +384,13 @@ export default function DashboardScreen({ navigation }: Props) {
       cashFlowItems: buildPayload(),
     };
 
-    console.log(payload, "test");
+    approvalCashFlow(payload, {
+      onSuccess: ({ message }: { message: string }) => {
+        queryClient.invalidateQueries({ queryKey: ["cash-flow:history"] });
+        closeTransaksi();
+        ToastSuccess(message);
+      },
+    });
   };
 
   /* -------------------- Navigation -------------------- */
@@ -468,7 +470,7 @@ export default function DashboardScreen({ navigation }: Props) {
                 >
                   {loadingDashboard
                     ? "—"
-                    : formatRupiah(dashboardData?.data?.omsetHariIni)}
+                    : formatRupiah(dashboardData?.data?.totalOmset)}
                 </Text>
                 <Ionicons name="cash-outline" size={28} color="#10B981" />
               </View>
@@ -748,8 +750,13 @@ export default function DashboardScreen({ navigation }: Props) {
                     styles.actionBtn,
                     styles.actionBtnPrimary,
                     transaksiCashFlow?.verified === 1 && styles.btnDisabled,
+                    transaksiCashFlow?.verified === 0 && styles.btnDisabled,
                   ]}
-                  disabled={savingTrx || transaksiCashFlow?.verified === 1}
+                  disabled={
+                    savingTrx ||
+                    transaksiCashFlow?.verified === 1 ||
+                    transaksiCashFlow?.verified === 0
+                  }
                   onPress={submitTrx}
                   accessibilityRole="button"
                 >

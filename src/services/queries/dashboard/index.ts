@@ -3,6 +3,7 @@ import { handleError } from "../../../utils/error";
 import {
   addCashFlow,
   addReportApi,
+  approvalCashFlow,
   confirmReportApi,
   getAllCashFlowApi,
   getCabangToday,
@@ -20,6 +21,13 @@ export const useDashboardQuery = (enabled: boolean) => {
     enabled,
     refetchOnMount: true,
     retryOnMount: true,
+  });
+};
+
+export const useApprovalCashFlowMutation = () => {
+  return useMutation({
+    mutationFn: approvalCashFlow,
+    onError: handleError,
   });
 };
 
