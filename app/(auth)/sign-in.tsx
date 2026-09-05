@@ -241,11 +241,12 @@ const styles = StyleSheet.create({
   // Logo
   logoContainer: {
     alignSelf: "center",
-    marginBottom: 8,
+    marginBottom: 15,
+    marginTop: -50,
   },
   logoImage: {
-    width: 80,
-    height: 80,
+    width: 150,
+    height: 150,
   },
 
   // Heading

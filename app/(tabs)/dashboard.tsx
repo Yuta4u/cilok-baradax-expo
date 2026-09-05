@@ -387,6 +387,9 @@ export default function DashboardScreen({ navigation }: Props) {
     approvalCashFlow(payload, {
       onSuccess: ({ message }: { message: string }) => {
         queryClient.invalidateQueries({ queryKey: ["cash-flow:history"] });
+        queryClient.invalidateQueries({ queryKey: ["cash-flow:cabang:today"] });
+        queryClient.invalidateQueries({ queryKey: ["cash-flow:cabang:today"] });
+
         closeTransaksi();
         ToastSuccess(message);
       },
@@ -423,23 +426,7 @@ export default function DashboardScreen({ navigation }: Props) {
       {/* ── Fixed Top Section ── */}
       <SafeAreaView edges={["top"]} style={styles.headerSafeArea}>
         <View style={styles.header}>
-          <TouchableOpacity
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Menu"
-          >
-            <Ionicons name="menu" size={26} color="#fff" />
-          </TouchableOpacity>
-
           <Text style={styles.headerTitle}>Dashboard</Text>
-
-          <TouchableOpacity
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Notifikasi"
-          >
-            <Ionicons name="notifications-outline" size={24} color="#fff" />
-          </TouchableOpacity>
         </View>
       </SafeAreaView>
 

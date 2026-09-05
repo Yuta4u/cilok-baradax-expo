@@ -326,6 +326,9 @@ export default function StockManagement() {
       {
         onSuccess: ({ message }: { message: string }) => {
           queryClient.invalidateQueries({ queryKey: ["inventory:product"] });
+          queryClient.invalidateQueries({
+            queryKey: ["cash-flow:cabang:today"],
+          });
           ToastSuccess(message);
           closeStockModal();
         },

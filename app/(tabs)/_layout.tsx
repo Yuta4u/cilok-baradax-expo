@@ -50,6 +50,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="stock-log"
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={"time-sharp"} color={color} size={24} />
+          ),
+          href: authorized ? "/stock-log" : "/(tabs)/dashboard",
+        }}
+      />
+      <Tabs.Screen
         name="user"
         options={{
           tabBarIcon: ({ color, focused }) => (
