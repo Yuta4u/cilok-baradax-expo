@@ -37,7 +37,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"file-tray-sharp"} color={color} size={24} />
           ),
-          href: authorized ? "/inventory" : "/(tabs)/dashboard",
+          href: authorized ? "/inventory" : null, // BARU: null = hilang dari tab bar
         }}
       />
       <Tabs.Screen
@@ -46,7 +46,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"file-tray-sharp"} color={color} size={24} />
           ),
-          href: authorized ? "/stock-management" : "/(tabs)/dashboard",
+          href: authorized ? "/stock-management" : null, // BARU
         }}
       />
       <Tabs.Screen
@@ -55,7 +55,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"time-sharp"} color={color} size={24} />
           ),
-          href: authorized ? "/stock-log" : "/(tabs)/dashboard",
+          href: authorized ? "/stock-log" : null, // BARU
         }}
       />
       <Tabs.Screen
@@ -64,7 +64,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"home-sharp"} color={color} size={24} />
           ),
-          href: authorized ? "/user" : "/(tabs)/dashboard",
+          // selalu tampil untuk semua role — tidak diubah
         }}
       />
       <Tabs.Screen

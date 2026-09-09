@@ -1,7 +1,6 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   KeyboardAvoidingView,
   Modal,
@@ -29,7 +28,6 @@ import { enumeratePermission } from "../../src/utils/permissions";
 import { ToastError, ToastSuccess } from "../../src/utils/toast";
 import { handleError } from "../../src/utils/error";
 import { useQueryClient } from "@tanstack/react-query";
-import { on } from "node:cluster";
 
 const ORANGE = "#B94A1A";
 const ORANGE_SOFT = "#FFF3EE";
@@ -71,7 +69,7 @@ const getProductId = (item: CashFlowDetail): RowId =>
   item.productId ?? item.product?.id ?? item.id;
 
 const getRowQty = (item: ICashFlowItem): number =>
-  toNumber(item.out ?? item.in);
+  toNumber(!item.out ? item.out : item.in - item.out);
 
 const getRowPrice = (item: CashFlowDetail): number =>
   toNumber(item.price ?? item.product?.price);
@@ -314,6 +312,10 @@ export default function DashboardScreen({ navigation }: Props) {
   const [savingTrx, setSavingTrx] = useState(false);
   const [approving, setApproving] = useState(false);
 
+  // BARU
+  const [pengeluaranTambahan, setPengeluaranTambahan] = useState("");
+  const [trxNote, setTrxNote] = useState("");
+
   const [transaksiCashFlow, setTransaksiCashFlow] = useState<ICashFlow | null>(
     null,
   );
@@ -331,6 +333,10 @@ export default function DashboardScreen({ navigation }: Props) {
     setTrxInput(seed);
     setTrxBaseline(seed);
     setTransaksiCashFlow(cashFlow);
+
+    // BARU — seed dari data existing kalau ada
+    setPengeluaranTambahan(cashFlow.overhead.toString() ?? "");
+    setTrxNote(cashFlow.note ?? "");
   }, []);
 
   const closeTransaksi = useCallback(() => {
@@ -338,6 +344,10 @@ export default function DashboardScreen({ navigation }: Props) {
     setTrxInput({});
     setTrxBaseline({});
     setTransaksiCashFlow(null);
+
+    // BARU
+    setPengeluaranTambahan("");
+    setTrxNote("");
   }, []);
 
   const submitTrx = () => {
@@ -348,8 +358,11 @@ export default function DashboardScreen({ navigation }: Props) {
     const payload = {
       id: transaksiCashFlow?.id as never,
       cashFlowItems: buildPayload(),
+      pengeluaranTambahan: toNumber(pengeluaranTambahan), // BARU
+      note: trxNote.trim(),
     };
 
+    setSavingTrx(true); // ini juga sebelumnya nggak pernah di-set true, jadi loading spinner gak pernah muncul
     submitCashFlow(payload, {
       onSuccess: ({ message }: { message: string }) => {
         queryClient.invalidateQueries({ queryKey: ["cash-flow:history"] });
@@ -382,8 +395,11 @@ export default function DashboardScreen({ navigation }: Props) {
     const payload = {
       id: transaksiCashFlow?.id as never,
       cashFlowItems: buildPayload(),
+      pengeluaranTambahan: toNumber(pengeluaranTambahan), // BARU
+      note: trxNote.trim(),
     };
 
+    setApproving(true); // sama, biar spinner & disabled state jalan
     approvalCashFlow(payload, {
       onSuccess: ({ message }: { message: string }) => {
         queryClient.invalidateQueries({ queryKey: ["cash-flow:history"] });
@@ -446,6 +462,23 @@ export default function DashboardScreen({ navigation }: Props) {
 
         {isCabang && (
           <View style={styles.statsGrid}>
+            <View style={[styles.statCard, { borderLeftColor: "#10B981" }]}>
+              <Text style={styles.statLabel}>Omset Hari Ini</Text>
+              <View style={styles.statRow}>
+                <Text
+                  style={styles.statValueMoney}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.7}
+                >
+                  {loadingDashboard
+                    ? "—"
+                    : formatRupiah(dashboardData?.data?.totalOmset)}
+                </Text>
+                <Ionicons name="cash-outline" size={28} color="#10B981" />
+              </View>
+            </View>
+
             <View style={[styles.statCard, { borderLeftColor: "#10B981" }]}>
               <Text style={styles.statLabel}>Omset Hari Ini</Text>
               <View style={styles.statRow}>
@@ -731,6 +764,36 @@ export default function DashboardScreen({ navigation }: Props) {
                   }}
                 />
               )}
+              <View style={styles.divider} />
+
+              <View style={styles.extraFieldsWrap}>
+                <Text style={styles.fieldLabel}>Pengeluaran Tambahan</Text>
+                <TextInput
+                  keyboardType="number-pad"
+                  placeholder="0"
+                  placeholderTextColor="#9CA3AF"
+                  style={styles.fieldInput}
+                  value={pengeluaranTambahan}
+                  onChangeText={(val) =>
+                    setPengeluaranTambahan(digitsOnly(val))
+                  }
+                  editable={transaksiCashFlow?.verified === 2 || isAdmin}
+                  accessibilityLabel="Pengeluaran tambahan"
+                />
+
+                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Note</Text>
+                <TextInput
+                  placeholder="Tambahkan catatan (opsional)"
+                  placeholderTextColor="#9CA3AF"
+                  style={[styles.fieldInput, styles.fieldInputMultiline]}
+                  value={trxNote}
+                  onChangeText={setTrxNote}
+                  editable={transaksiCashFlow?.verified === 2 || isAdmin}
+                  multiline
+                  numberOfLines={3}
+                  accessibilityLabel="Catatan transaksi"
+                />
+              </View>
               <View style={styles.sheetActions}>
                 <TouchableOpacity
                   style={[
@@ -832,18 +895,18 @@ const styles = StyleSheet.create({
 
   statsGrid: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
     marginBottom: 20,
   },
+
   statCard: {
-    // flex:1 instead of width:"47%" — two 47% cards plus a 12px gap
-    // overflow the row on narrow devices.
-    flex: 1,
-    minWidth: 0,
+    width: "48%",
     backgroundColor: "#fff",
     borderRadius: 12,
     padding: 14,
     borderLeftWidth: 4,
+
     shadowColor: "#000",
     shadowOpacity: 0.05,
     shadowOffset: { width: 0, height: 2 },
@@ -1014,6 +1077,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#9CA3AF",
     textAlign: "center",
+  },
+  extraFieldsWrap: { marginTop: 4 },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#374151",
+    marginBottom: 6,
+  },
+  fieldInput: {
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: "#111827",
+    fontSize: 13,
+  },
+  fieldInputMultiline: {
+    minHeight: 70,
+    textAlignVertical: "top",
   },
 
   // STOCK ROW

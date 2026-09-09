@@ -58,7 +58,6 @@ export async function getStockHistoryApi({
   );
 
   const data = await res.json();
-  console.log(data, "test");
 
   if (!res.ok) {
     ToastError(

@@ -175,6 +175,7 @@ interface ICashFlow {
   in: number;
   out: number;
   note: string;
+  overhead: number;
   verified: 0 | 1 | 2;
   user: IUser;
   cashFlowItems: ICashFlowItem[];
