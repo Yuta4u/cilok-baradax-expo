@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -7,6 +7,7 @@ import {
   Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StatusBar,
   StyleSheet,
   Text,
@@ -21,6 +22,7 @@ import {
   useCabangHistoryQuery,
   useCabangTodayQuery,
   useDashboardQuery,
+  useGetDetailByIdQuery,
   useSubmitCashFlowMutation,
 } from "../../src/services/queries/dashboard";
 import { useAuthStore } from "../../src/utils/authStore";
@@ -57,6 +59,47 @@ type Props = {
   navigation?: { navigate: (route: string, params?: object) => void };
 };
 
+/* ─── Dummy data — Laporan Harian Jualan ───────────────────────────────────
+ * Contoh: Sabtu 29 Agustus 2026, Outlet Kelapa 2, PIC Openg.
+ * Ganti/pindahkan ke response API begitu field-nya sudah tersedia.
+ * ------------------------------------------------------------------------ */
+const dummyCashFlowDetail = {
+  id: 1,
+  outlet: "Kelapa 2",
+  pic: "Openg",
+  tanggal: "2026-08-29",
+  verified: 0, // 0 = aktif, 1 = approval, 2 = submit first
+
+  stockAwal: [
+    { id: "sa-1", name: "Kecil", qty: 400 },
+    { id: "sa-2", name: "Gede", qty: 89 },
+    { id: "sa-3", name: "Tahu", qty: 15 },
+  ],
+  stockAwalTotal: 964,
+
+  stockSisa: [
+    { id: "ss-1", name: "Kecil", qty: 106 },
+    { id: "ss-2", name: "Gede", qty: 27 },
+    { id: "ss-3", name: "Tahu", qty: null }, // "-" di laporan = belum diisi
+  ],
+  stockSisaTotal: 268,
+
+  penjualan: {
+    cash: 563000,
+    qr: 133000,
+  },
+
+  pengeluaran: [
+    { id: "px-1", label: "Ngambil duit", amount: 90000 },
+    { id: "px-2", label: "-", amount: 5000 },
+  ],
+  pengeluaranTotal: 95000,
+
+  sisaCash: 468000,
+
+  note: "",
+};
+
 const toNumber = (value: unknown): number => {
   if (typeof value === "number") return Number.isFinite(value) ? value : 0;
   if (typeof value !== "string") return 0;
@@ -68,8 +111,10 @@ const toNumber = (value: unknown): number => {
 const getProductId = (item: CashFlowDetail): RowId =>
   item.productId ?? item.product?.id ?? item.id;
 
+// FIX: kondisinya sebelumnya terbalik — kalau item.out falsy (0/undefined),
+// harusnya jatuh ke item.in, bukan kembalikan item.out itu sendiri.
 const getRowQty = (item: ICashFlowItem): number =>
-  toNumber(!item.out ? item.out : item.in - item.out);
+  toNumber(item.out ? item.in - item.out : item.in);
 
 const getRowPrice = (item: CashFlowDetail): number =>
   toNumber(item.price ?? item.product?.price);
@@ -135,7 +180,6 @@ const StockRow = React.memo(function StockRow({
           placeholderTextColor="#9CA3AF"
           maxLength={6}
           style={[styles.qtyInput, toNumber(qty) > 0 && styles.qtyInputFilled]}
-          value={qty}
           onChangeText={(val) => onChangeQty(id, digitsOnly(val))}
           accessibilityLabel={`Qty ${name}`}
         />
@@ -144,6 +188,46 @@ const StockRow = React.memo(function StockRow({
           <Text style={styles.qtyBadgeText}>{toNumber(qty)}</Text>
         </View>
       )}
+    </View>
+  );
+});
+
+/* ─── Detail Sheet: baris & section reusable ─── */
+
+type DetailRowProps = {
+  label: string;
+  value: string | number | null;
+};
+
+const DetailRow = React.memo(function DetailRow({
+  label,
+  value,
+}: DetailRowProps) {
+  return (
+    <View style={styles.detailRow}>
+      <Text style={styles.detailRowLabel} numberOfLines={1}>
+        {label}
+      </Text>
+      <Text style={styles.detailRowValue} numberOfLines={1}>
+        {value === null || value === undefined ? "-" : value}
+      </Text>
+    </View>
+  );
+});
+
+type DetailTotalRowProps = {
+  label: string;
+  value: string | number;
+};
+
+const DetailTotalRow = React.memo(function DetailTotalRow({
+  label,
+  value,
+}: DetailTotalRowProps) {
+  return (
+    <View style={[styles.detailRow, styles.detailRowTotal]}>
+      <Text style={styles.detailRowTotalLabel}>{label}</Text>
+      <Text style={styles.detailRowTotalValue}>{value}</Text>
     </View>
   );
 });
@@ -280,6 +364,14 @@ export default function DashboardScreen({ navigation }: Props) {
 
   const { mutate: submitCashFlow } = useSubmitCashFlowMutation();
 
+  const [selectedCabangId, setSelectedCabangId] = useState<string | null>(null);
+
+  const {
+    data: detailData,
+    isLoading: loadingDetail,
+    isError: errorDetail,
+  } = useGetDetailByIdQuery(selectedCabangId ?? undefined);
+
   const {
     data: cabangData,
     isLoading: loadingCabang,
@@ -296,7 +388,15 @@ export default function DashboardScreen({ navigation }: Props) {
   const [selectedCabang, setSelectedCabang] = useState<ICashFlow | null>(null);
 
   const openDetail = useCallback((cabang: ICashFlow) => {
+    const isVerified = cabang.verified === 0;
+
+    if (!isVerified) {
+      ToastError("Laporan belum diverifikasi");
+      return;
+    }
+
     setSelectedCabang(cabang);
+    setSelectedCabangId(cabang.id);
   }, []);
 
   const closeDetail = useCallback(() => {
@@ -312,7 +412,6 @@ export default function DashboardScreen({ navigation }: Props) {
   const [savingTrx, setSavingTrx] = useState(false);
   const [approving, setApproving] = useState(false);
 
-  // BARU
   const [pengeluaranTambahan, setPengeluaranTambahan] = useState("");
   const [trxNote, setTrxNote] = useState("");
 
@@ -334,8 +433,7 @@ export default function DashboardScreen({ navigation }: Props) {
     setTrxBaseline(seed);
     setTransaksiCashFlow(cashFlow);
 
-    // BARU — seed dari data existing kalau ada
-    setPengeluaranTambahan(cashFlow.overhead.toString() ?? "");
+    setPengeluaranTambahan(cashFlow.overhead?.toString() ?? "");
     setTrxNote(cashFlow.note ?? "");
   }, []);
 
@@ -345,24 +443,24 @@ export default function DashboardScreen({ navigation }: Props) {
     setTrxBaseline({});
     setTransaksiCashFlow(null);
 
-    // BARU
     setPengeluaranTambahan("");
     setTrxNote("");
   }, []);
 
   const submitTrx = () => {
     if (!transaksiCashFlow) {
-      ToastError("Cash flow not found, please reopen.");
+      ToastError("Cash flow not found, please reopenx.");
+      return;
     }
 
     const payload = {
       id: transaksiCashFlow?.id as never,
       cashFlowItems: buildPayload(),
-      pengeluaranTambahan: toNumber(pengeluaranTambahan), // BARU
+      pengeluaranTambahan: toNumber(pengeluaranTambahan),
       note: trxNote.trim(),
     };
 
-    setSavingTrx(true); // ini juga sebelumnya nggak pernah di-set true, jadi loading spinner gak pernah muncul
+    setSavingTrx(true);
     submitCashFlow(payload, {
       onSuccess: ({ message }: { message: string }) => {
         queryClient.invalidateQueries({ queryKey: ["cash-flow:history"] });
@@ -395,20 +493,23 @@ export default function DashboardScreen({ navigation }: Props) {
     const payload = {
       id: transaksiCashFlow?.id as never,
       cashFlowItems: buildPayload(),
-      pengeluaranTambahan: toNumber(pengeluaranTambahan), // BARU
+      pengeluaranTambahan: toNumber(pengeluaranTambahan),
       note: trxNote.trim(),
     };
 
-    setApproving(true); // sama, biar spinner & disabled state jalan
+    setApproving(true);
     approvalCashFlow(payload, {
       onSuccess: ({ message }: { message: string }) => {
         queryClient.invalidateQueries({ queryKey: ["cash-flow:history"] });
-        queryClient.invalidateQueries({ queryKey: ["cash-flow:cabang:today"] });
-        queryClient.invalidateQueries({ queryKey: ["cash-flow:cabang:today"] });
+        queryClient.invalidateQueries({
+          queryKey: ["cash-flow:cabang:today"],
+        });
 
         closeTransaksi();
         ToastSuccess(message);
       },
+      onError: (err) => handleError(err as never),
+      onSettled: () => setApproving(false),
     });
   };
 
@@ -432,8 +533,61 @@ export default function DashboardScreen({ navigation }: Props) {
         onTransaksi={openTransaksi}
       />
     ),
-    [openDetail, openTransaksi],
+    [isAdmin, openDetail, openTransaksi],
   );
+
+  // FIX: renderItem transaksi sekarang di-useCallback dan cuma re-create saat
+  // dependency-nya benar-benar berubah (bukan setiap keystroke di field lain
+  // yang bikin DashboardScreen re-render).
+  const renderTrxItem = useCallback(
+    ({ item }: { item: ICashFlowItem }) => {
+      const qty = trxInput[item.id] ?? "";
+      const price = getRowPrice(item);
+      const subtotal = item.out ? item.out * price : item.in * price;
+
+      return (
+        <StockRow
+          id={item.id}
+          name={item.product?.name || "-"}
+          priceLabel={
+            price > 0
+              ? formatRupiah(price) +
+                (subtotal > 0 ? `  ·  ${formatRupiah(subtotal)}` : "")
+              : undefined
+          }
+          qty={qty}
+          editable={transaksiCashFlow?.verified === 2 || isAdmin}
+          onChangeQty={handleChangeTrxQty}
+        />
+      );
+    },
+    [trxInput, transaksiCashFlow?.verified, isAdmin, handleChangeTrxQty],
+  );
+
+  const trxKeyExtractor = useCallback(
+    (item: ICashFlowItem, index: number) =>
+      `${String(getProductId(item))}-${index}`,
+    [],
+  );
+
+  // TODO: ganti dummyCashFlowDetail dengan mapping dari `selectedCabang`
+  // begitu field laporan (outlet, pic, stockAwal, stockSisa, penjualan,
+  // pengeluaran, sisaCash) sudah tersedia dari API.
+  const detail = dummyCashFlowDetail;
+
+  const detailTotalPrice = useMemo(() => {
+    return detailData?.cashFlowItems.reduce(
+      (acc, item) => acc + item.out * item.price,
+      0,
+    );
+  }, [detailData]);
+
+  const detailTotalPriceSisa = useMemo(() => {
+    return detailData?.cashFlowItems.reduce(
+      (acc, item) => acc + (item.in - item.out) * item.price,
+      0,
+    );
+  }, [detailData]);
 
   return (
     <View style={styles.container}>
@@ -564,6 +718,7 @@ export default function DashboardScreen({ navigation }: Props) {
         />
       )}
 
+      {/* ── Modal Detail (Laporan Harian) — tetap bottom sheet ── */}
       <Modal
         visible={selectedCabang !== null}
         transparent
@@ -577,7 +732,10 @@ export default function DashboardScreen({ navigation }: Props) {
           accessibilityRole="button"
           accessibilityLabel="Tutup detail cabang"
         >
-          <Pressable style={styles.sheet} onPress={() => {}}>
+          <Pressable
+            style={[styles.sheet, styles.sheetTall]}
+            onPress={() => {}}
+          >
             <View style={styles.sheetHandle} />
 
             <View style={styles.sheetHeader}>
@@ -591,10 +749,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
               <View style={styles.flex}>
                 <Text style={styles.sheetTitle} numberOfLines={2}>
-                  {selectedCabang?.user?.name || "-"}
-                </Text>
-                <Text style={styles.sheetSubtitle}>
-                  ID cabang {selectedCabang?.id ?? "-"}
+                  {selectedCabang?.user?.name || detail.outlet}
                 </Text>
               </View>
 
@@ -616,42 +771,78 @@ export default function DashboardScreen({ navigation }: Props) {
                     },
                   ]}
                 >
-                  {selectedCabang?.verified ? "Belum diverifikasi" : "Aktif"}
+                  {detailData?.verified ? "Belum diverifikasi" : "Aktif"}
                 </Text>
               </View>
             </View>
 
             <View style={styles.divider} />
 
-            <View style={styles.sheetRow}>
-              <View
-                style={[styles.statIconWrap, { backgroundColor: "#ECFDF5" }]}
-              >
-                <Ionicons name="cash-outline" size={16} color="#10B981" />
-              </View>
-              <Text style={styles.sheetRowLabel}>Omset Hari Ini</Text>
-              <Text
-                style={[styles.sheetRowValue, { color: "#10B981" }]}
-                numberOfLines={1}
-              >
-                {formatRupiah("10000")}
-              </Text>
-            </View>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={styles.sheetList}
+            >
+              {/* Stock Awal */}
+              <Text style={styles.detailSectionTitle}>Stock Awal</Text>
+              {detailData?.cashFlowItems.map((item) => (
+                <DetailRow
+                  key={item.id}
+                  label={item.product?.name}
+                  value={item.in}
+                />
+              ))}
+              <DetailTotalRow
+                label="Jumlah"
+                value={formatRupiah(detailTotalPrice)}
+              />
 
-            <View style={styles.sheetRow}>
-              <View
-                style={[styles.statIconWrap, { backgroundColor: "#F5F3FF" }]}
-              >
-                <Ionicons name="receipt-outline" size={16} color="#8B5CF6" />
+              <View style={styles.detailDivider} />
+
+              {/* Stock Sisa */}
+              <Text style={styles.detailSectionTitle}>Stock Sisa</Text>
+              {detailData?.cashFlowItems.map((item) => (
+                <DetailRow
+                  key={item.id}
+                  label={item.product.name}
+                  value={item.in - item.out}
+                />
+              ))}
+              <DetailTotalRow
+                label="Jumlah"
+                value={formatRupiah(detailTotalPriceSisa)}
+              />
+
+              <View style={styles.detailDivider} />
+
+              {/* Laporan Penjualan */}
+              <Text style={styles.detailSectionTitle}>Laporan Penjualan</Text>
+              <DetailRow label="Cash" value={formatRupiah(detailTotalPrice)} />
+              <DetailTotalRow
+                label="Total Penjualan"
+                value={formatRupiah(detailTotalPrice)}
+              />
+
+              <View style={styles.detailDivider} />
+
+              {/* Laporan Pengeluaran */}
+              <Text style={styles.detailSectionTitle}>Laporan Pengeluaran</Text>
+              <DetailTotalRow
+                label={detailData?.note}
+                value={formatRupiah(detailData?.overhead)}
+              />
+              <DetailTotalRow
+                label="Jumlah Pengeluaran"
+                value={formatRupiah(detailData?.overhead)}
+              />
+
+              {/* Sisa Cash */}
+              <View style={styles.sisaCashBox}>
+                <Text style={styles.sisaCashLabel}>Sisa Cash</Text>
+                <Text style={styles.sisaCashValue}>
+                  {formatRupiah(detailTotalPrice - detailData?.overhead)}
+                </Text>
               </View>
-              <Text style={styles.sheetRowLabel}>Transaksi</Text>
-              <Text
-                style={[styles.sheetRowValue, { color: "#8B5CF6" }]}
-                numberOfLines={1}
-              >
-                1x
-              </Text>
-            </View>
+            </ScrollView>
 
             <TouchableOpacity
               style={styles.sheetCloseBtn}
@@ -664,186 +855,159 @@ export default function DashboardScreen({ navigation }: Props) {
         </Pressable>
       </Modal>
 
+      {/* ── Modal Transaksi Hari Ini — sekarang full screen ──
+       * Alasan: bottom-sheet + Modal transparan + KeyboardAvoidingView di
+       * Android rawan flicker saat keyboard buka/tutup. Full-screen modal
+       * pakai SafeAreaView biasa jauh lebih stabil dan juga kasih ruang
+       * lebih lega buat ngisi form.
+       */}
       <Modal
         visible={transaksiCashFlow !== null}
-        transparent
-        animationType="fade"
-        statusBarTranslucent
+        animationType="slide"
+        presentationStyle={Platform.OS === "ios" ? "fullScreen" : undefined}
+        statusBarTranslucent={false}
         onRequestClose={closeTransaksi}
       >
-        <KeyboardAvoidingView
-          style={styles.flex}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+        <SafeAreaView
+          style={styles.fullModalContainer}
+          edges={["top", "bottom"]}
         >
-          <Pressable
-            style={styles.backdrop}
-            onPress={closeTransaksi}
-            accessibilityRole="button"
-            accessibilityLabel="Tutup transaksi hari ini"
+          <StatusBar backgroundColor={ORANGE} barStyle="light-content" />
+          <KeyboardAvoidingView
+            style={styles.flex}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
           >
-            <Pressable
-              style={[styles.sheet, styles.sheetTall]}
-              onPress={() => {}}
-            >
-              <View style={styles.sheetHandle} />
+            <View style={styles.fullModalHeader}>
+              <TouchableOpacity
+                onPress={closeTransaksi}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel="Tutup"
+                style={styles.fullModalBack}
+              >
+                <Ionicons name="arrow-back" size={22} color="#111827" />
+              </TouchableOpacity>
 
-              <View style={styles.sheetHeader}>
-                <View style={styles.flex}>
-                  <Text style={styles.sheetTitle}>Transaksi</Text>
-                  <Text style={styles.sheetSubtitle} numberOfLines={1}>
-                    {user?.name || "-"} -{" "}
-                    {formatDate(
-                      transaksiCashFlow?.createdAt || new Date().toDateString(),
-                    )}
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  onPress={closeTransaksi}
-                  hitSlop={8}
-                  accessibilityRole="button"
-                  accessibilityLabel="Tutup"
-                >
-                  <Ionicons name="close" size={24} color="#6B7280" />
-                </TouchableOpacity>
+              <View style={styles.flex}>
+                <Text style={styles.fullModalTitle}>Transaksi</Text>
+                <Text style={styles.sheetSubtitle} numberOfLines={1}>
+                  {user?.name || "-"} -{" "}
+                  {formatDate(
+                    transaksiCashFlow?.createdAt || new Date().toDateString(),
+                  )}
+                </Text>
               </View>
+            </View>
 
-              <View style={styles.divider} />
+            <View style={styles.divider} />
 
-              {trxLoading ? (
-                <View style={styles.sheetLoading}>
-                  <ActivityIndicator color={ORANGE} />
-                </View>
-              ) : (
-                <FlatList
-                  data={trxItems}
-                  keyExtractor={(item, index) =>
-                    `${String(getProductId(item))}-${index}`
-                  }
-                  style={styles.sheetList}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
-                  ListEmptyComponent={
-                    <View style={styles.emptyBox}>
-                      <MaterialCommunityIcons
-                        name="clipboard-text-outline"
-                        size={28}
-                        color="#9CA3AF"
-                      />
-                      <Text style={styles.emptyTitle}>Belum ada transaksi</Text>
-                      <Text style={styles.emptyText}>
-                        Stock hari ini belum diinput untuk cabang ini.
-                      </Text>
-                    </View>
-                  }
-                  renderItem={({ item }: { item: ICashFlowItem }) => {
-                    const qty = trxInput[item.id] ?? "";
+            {trxLoading ? (
+              <View style={styles.sheetLoading}>
+                <ActivityIndicator color={ORANGE} />
+              </View>
+            ) : (
+              <FlatList
+                data={trxItems}
+                keyExtractor={trxKeyExtractor}
+                style={styles.fullModalList}
+                contentContainerStyle={styles.fullModalListContent}
+                keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="on-drag"
+                ListEmptyComponent={
+                  <View style={styles.emptyBox}>
+                    <MaterialCommunityIcons
+                      name="clipboard-text-outline"
+                      size={28}
+                      color="#9CA3AF"
+                    />
+                    <Text style={styles.emptyTitle}>Belum ada transaksi</Text>
+                    <Text style={styles.emptyText}>
+                      Stock hari ini belum diinput untuk cabang ini.
+                    </Text>
+                  </View>
+                }
+                renderItem={renderTrxItem}
+              />
+            )}
 
-                    const price = getRowPrice(item);
-                    const subtotal = item.out
-                      ? item.out * price
-                      : item.in * price;
+            <View style={styles.divider} />
 
-                    return (
-                      <StockRow
-                        id={item.id}
-                        name={item.product?.name || "-"}
-                        priceLabel={
-                          price > 0
-                            ? formatRupiah(price) +
-                              (subtotal > 0
-                                ? `  ·  ${formatRupiah(subtotal)}`
-                                : "")
-                            : undefined
-                        }
-                        qty={qty}
-                        editable={transaksiCashFlow?.verified === 2 || isAdmin}
-                        onChangeQty={handleChangeTrxQty}
-                      />
-                    );
+            <View style={styles.extraFieldsWrap}>
+              <Text style={styles.fieldLabel}>Pengeluaran Tambahan</Text>
+              <TextInput
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor="#9CA3AF"
+                style={styles.fieldInput}
+                value={pengeluaranTambahan}
+                onChangeText={(val) => setPengeluaranTambahan(digitsOnly(val))}
+                editable={transaksiCashFlow?.verified === 2 || isAdmin}
+                accessibilityLabel="Pengeluaran tambahan"
+              />
+
+              <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Note</Text>
+              <TextInput
+                placeholder="Tambahkan catatan (opsional)"
+                placeholderTextColor="#9CA3AF"
+                style={[styles.fieldInput, styles.fieldInputMultiline]}
+                value={trxNote}
+                onChangeText={setTrxNote}
+                editable={transaksiCashFlow?.verified === 2 || isAdmin}
+                multiline
+                numberOfLines={3}
+                accessibilityLabel="Catatan transaksi"
+              />
+            </View>
+
+            <View style={styles.sheetActions}>
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  styles.actionBtnPrimary,
+                  transaksiCashFlow?.verified === 1 && styles.btnDisabled,
+                  transaksiCashFlow?.verified === 0 && styles.btnDisabled,
+                ]}
+                disabled={
+                  savingTrx ||
+                  transaksiCashFlow?.verified === 1 ||
+                  transaksiCashFlow?.verified === 0
+                }
+                onPress={submitTrx}
+                accessibilityRole="button"
+              >
+                {savingTrx ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.actionBtnPrimaryText}>Submit</Text>
+                )}
+              </TouchableOpacity>
+
+              {isAdmin ? (
+                <TouchableOpacity
+                  style={[styles.actionBtn, styles.actionBtnApprove]}
+                  onPress={confirmApprove}
+                  accessibilityRole="button"
+                  accessibilityState={{
+                    busy: approving,
                   }}
-                />
-              )}
-              <View style={styles.divider} />
-
-              <View style={styles.extraFieldsWrap}>
-                <Text style={styles.fieldLabel}>Pengeluaran Tambahan</Text>
-                <TextInput
-                  keyboardType="number-pad"
-                  placeholder="0"
-                  placeholderTextColor="#9CA3AF"
-                  style={styles.fieldInput}
-                  value={pengeluaranTambahan}
-                  onChangeText={(val) =>
-                    setPengeluaranTambahan(digitsOnly(val))
-                  }
-                  editable={transaksiCashFlow?.verified === 2 || isAdmin}
-                  accessibilityLabel="Pengeluaran tambahan"
-                />
-
-                <Text style={[styles.fieldLabel, { marginTop: 12 }]}>Note</Text>
-                <TextInput
-                  placeholder="Tambahkan catatan (opsional)"
-                  placeholderTextColor="#9CA3AF"
-                  style={[styles.fieldInput, styles.fieldInputMultiline]}
-                  value={trxNote}
-                  onChangeText={setTrxNote}
-                  editable={transaksiCashFlow?.verified === 2 || isAdmin}
-                  multiline
-                  numberOfLines={3}
-                  accessibilityLabel="Catatan transaksi"
-                />
-              </View>
-              <View style={styles.sheetActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.actionBtn,
-                    styles.actionBtnPrimary,
-                    transaksiCashFlow?.verified === 1 && styles.btnDisabled,
-                    transaksiCashFlow?.verified === 0 && styles.btnDisabled,
-                  ]}
-                  disabled={
-                    savingTrx ||
-                    transaksiCashFlow?.verified === 1 ||
-                    transaksiCashFlow?.verified === 0
-                  }
-                  onPress={submitTrx}
-                  accessibilityRole="button"
                 >
-                  {savingTrx ? (
+                  {approving ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text style={styles.actionBtnPrimaryText}>Submit</Text>
+                    <>
+                      <Ionicons
+                        name="checkmark-circle-outline"
+                        size={16}
+                        color="#fff"
+                      />
+                      <Text style={styles.actionBtnApproveText}>Approve</Text>
+                    </>
                   )}
                 </TouchableOpacity>
-
-                {isAdmin ? (
-                  <TouchableOpacity
-                    style={[styles.actionBtn, styles.actionBtnApprove]}
-                    onPress={confirmApprove}
-                    accessibilityRole="button"
-                    accessibilityState={{
-                      busy: approving,
-                    }}
-                  >
-                    {approving ? (
-                      <ActivityIndicator color="#fff" />
-                    ) : (
-                      <>
-                        <Ionicons
-                          name="checkmark-circle-outline"
-                          size={16}
-                          color="#fff"
-                        />
-                        <Text style={styles.actionBtnApproveText}>Approve</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                ) : null}
-              </View>
-            </Pressable>
-          </Pressable>
-        </KeyboardAvoidingView>
+              ) : null}
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
       </Modal>
     </View>
   );
@@ -867,9 +1031,9 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    justifyContent: "center",
+    paddingTop: 20,
+    paddingBottom: 14,
   },
   headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
   fixedContent: { paddingHorizontal: 16, paddingTop: 16 },
@@ -955,7 +1119,11 @@ const styles = StyleSheet.create({
     gap: 10,
     marginBottom: 12,
   },
-  cabangIconWrap: { backgroundColor: ORANGE_SOFT, borderRadius: 8, padding: 8 },
+  cabangIconWrap: {
+    backgroundColor: ORANGE_SOFT,
+    borderRadius: 8,
+    padding: 8,
+  },
   cabangNama: { flex: 1, fontSize: 14, fontWeight: "700", color: "#222" },
   statusBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
   statusText: { fontSize: 11, fontWeight: "700" },
@@ -1007,7 +1175,7 @@ const styles = StyleSheet.create({
   cardBtnSolidText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   btnDisabled: { opacity: 0.5 },
 
-  // SHEETS
+  // SHEETS (Detail modal — tetap bottom sheet)
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(17, 24, 39, 0.45)",
@@ -1057,7 +1225,13 @@ const styles = StyleSheet.create({
   },
   sheetCloseText: { color: "#fff", fontWeight: "800" },
 
-  sheetActions: { flexDirection: "row", gap: 10, marginTop: 14 },
+  sheetActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 14,
+    paddingHorizontal: 18,
+    paddingBottom: 10,
+  },
   actionBtn: {
     flex: 1,
     flexDirection: "row",
@@ -1078,7 +1252,7 @@ const styles = StyleSheet.create({
     color: "#9CA3AF",
     textAlign: "center",
   },
-  extraFieldsWrap: { marginTop: 4 },
+  extraFieldsWrap: { marginTop: 4, paddingHorizontal: 18 },
   fieldLabel: {
     fontSize: 12,
     fontWeight: "700",
@@ -1098,6 +1272,28 @@ const styles = StyleSheet.create({
     minHeight: 70,
     textAlignVertical: "top",
   },
+
+  // FULL SCREEN MODAL (Transaksi Hari Ini)
+  fullModalContainer: { flex: 1, backgroundColor: "#fff" },
+  fullModalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 14,
+  },
+  fullModalBack: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+  },
+  fullModalTitle: { fontSize: 17, fontWeight: "800", color: "#111827" },
+  fullModalList: { flex: 1 },
+  fullModalListContent: { paddingHorizontal: 18, paddingBottom: 12 },
 
   // STOCK ROW
   stockRow: {
@@ -1133,4 +1329,52 @@ const styles = StyleSheet.create({
   emptyBox: { alignItems: "center", paddingVertical: 48, gap: 6 },
   emptyTitle: { fontWeight: "700", color: "#374151" },
   emptyText: { color: "#6B7280", fontSize: 12, textAlign: "center" },
+
+  // DETAIL SHEET (Laporan Harian)
+  detailSectionTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: ORANGE,
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    marginBottom: 6,
+  },
+  detailRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 6,
+  },
+  detailRowLabel: { flex: 1, fontSize: 13, color: "#6B7280" },
+  detailRowValue: { fontSize: 13, fontWeight: "700", color: "#111827" },
+  detailRowTotal: {
+    borderTopWidth: 1,
+    borderTopColor: "#F3F4F6",
+    marginTop: 4,
+    paddingTop: 8,
+  },
+  detailRowTotalLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#374151",
+  },
+  detailRowTotalValue: { fontSize: 14, fontWeight: "800", color: "#111827" },
+  detailDivider: {
+    height: 1,
+    backgroundColor: "#F3F4F6",
+    marginVertical: 14,
+  },
+  sisaCashBox: {
+    marginTop: 16,
+    backgroundColor: "#ECFDF5",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  sisaCashLabel: { fontSize: 13, fontWeight: "700", color: "#065F46" },
+  sisaCashValue: { fontSize: 16, fontWeight: "800", color: GREEN },
 });

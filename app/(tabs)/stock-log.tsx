@@ -257,7 +257,8 @@ const s = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#F9FAFB",
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0,
+    // paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0,
+    // paddingVertical: 20,
   },
   header: {
     backgroundColor: BRAND,
@@ -265,7 +266,8 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingBottom: 14,
+    paddingTop: 69,
   },
   headerTitle: {
     color: "#fff",

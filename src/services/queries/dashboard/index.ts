@@ -9,6 +9,7 @@ import {
   getCabangToday,
   getCashFlowByIdApi,
   getDashboard,
+  getDetailById,
   getHistory,
   getViewCashFlowApi,
   submitCashFlow,
@@ -48,6 +49,16 @@ export const useCabangTodayQuery = (enabled: boolean) => {
     enabled,
     refetchOnMount: true,
     retryOnMount: true,
+  });
+};
+
+// services/queries/dashboard.ts
+export const useGetDetailByIdQuery = (id?: string) => {
+  return useQuery({
+    queryFn: () => getDetailById(id as never),
+    queryKey: ["cash-flow:detail", id],
+    enabled: !!id,
+    refetchOnMount: true,
   });
 };
 

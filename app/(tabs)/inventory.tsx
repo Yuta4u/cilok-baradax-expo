@@ -148,7 +148,8 @@ const StockInModal: React.FC<StockInModalProps> = ({
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <View style={m.overlay}>
           <TouchableOpacity
@@ -453,7 +454,7 @@ export default function DataStokScreen() {
       {/* Header */}
       <View style={s.header}>
         <View style={{ width: 36 }} />
-        <Text style={s.headerTitle}>Data Stok</Text>
+        <Text style={s.headerTitle}>Inventory</Text>
         <TouchableOpacity
           style={s.headerBtn}
           onPress={() => setModalVisible(true)}
@@ -558,7 +559,8 @@ export default function DataStokScreen() {
       >
         <KeyboardAvoidingView
           style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
           <View style={m.overlay}>
             <TouchableOpacity
@@ -661,7 +663,7 @@ const s = StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: "#F9FAFB",
-    paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0,
+    // paddingTop: Platform.OS === "android" ? (StatusBar.currentHeight ?? 0) : 0,
   },
   header: {
     backgroundColor: BRAND,
@@ -669,7 +671,8 @@ const s = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingBottom: 14,
+    paddingTop: 58,
   },
   headerBtn: {
     width: 36,

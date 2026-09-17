@@ -212,6 +212,29 @@ export async function addReportApi(payload: AddReport) {
   return data;
 }
 
+export async function getDetailById(id: string) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/detail/${id}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+  return data;
+}
+
 export async function confirmReportApi(payload: ConfirmReport) {
   const { accessToken } = useAuthStore.getState();
 

@@ -438,23 +438,7 @@ export default function StockManagement() {
       {/* HEADER */}
       <SafeAreaView edges={["top"]} style={styles.headerSafeArea}>
         <View style={styles.header}>
-          <TouchableOpacity
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Menu"
-          >
-            <Ionicons name="menu" size={26} color="#fff" />
-          </TouchableOpacity>
-
-          <Text style={styles.headerTitle}>Dashboard</Text>
-
-          <TouchableOpacity
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Notifikasi"
-          >
-            <Ionicons name="notifications-outline" size={24} color="#fff" />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Stock Management</Text>
         </View>
       </SafeAreaView>
 
@@ -762,11 +746,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 18,
-    paddingVertical: 12,
+    justifyContent: "center",
+    paddingTop: 20,
+    paddingBottom: 14,
+    textAlign: "center",
   },
-  headerTitle: { color: "#fff", fontSize: 18, fontWeight: "700" },
+  headerTitle: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
 
   scroll: { padding: 16, paddingBottom: 40, flexGrow: 1 },
 
