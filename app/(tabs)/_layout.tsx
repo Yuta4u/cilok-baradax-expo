@@ -15,9 +15,9 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: "#fff2de",
+        tabBarActiveTintColor: "#B94A1A",
         tabBarStyle: {
-          backgroundColor: "#000000e8",
+          backgroundColor: "#fdfdfde8",
           borderTopColor: "#fff2de",
         },
         headerShown: false,
@@ -64,7 +64,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"home-sharp"} color={color} size={24} />
           ),
-          href: authorized ? "/stock-log" : null, // BARU
+          href: authorized ? "/user" : null, // BARU
 
           // selalu tampil untuk semua role — tidak diubah
         }}

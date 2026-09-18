@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "with-router-tailwind",
-    "slug": "with-router-tailwind",
-    "scheme": "with-router-tailwind",
+    "name": "Cilok Baradax",
+    "slug": "cilok-baradax",
+    "scheme": "cilok-baradax",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -12,6 +12,9 @@
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
+    },
+    "android": {
+      "edgeToEdgeEnabled": true
     },
     "ios": {
       "supportsTablet": true
@@ -36,6 +39,15 @@
         "projectId": "9923a165-71fd-4870-b1e5-40426c451ade"
       }
     },
-    "owner": "yutadeve"
+    "owner": "yutadeve",
+    "plugins": [
+      [
+        "expo-file-system",
+        {
+          "supportsOpeningDocumentsInPlace": true,
+          "enableFileSharing": true
+        }
+      ]
+    ]
   }
 }

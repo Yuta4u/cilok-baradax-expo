@@ -23,6 +23,7 @@ import {
   useCabangTodayQuery,
   useDashboardQuery,
   useGetDetailByIdQuery,
+  useHistoryExcelMutation,
   useSubmitCashFlowMutation,
 } from "../../src/services/queries/dashboard";
 import { useAuthStore } from "../../src/utils/authStore";
@@ -30,6 +31,8 @@ import { enumeratePermission } from "../../src/utils/permissions";
 import { ToastError, ToastSuccess } from "../../src/utils/toast";
 import { handleError } from "../../src/utils/error";
 import { useQueryClient } from "@tanstack/react-query";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 const ORANGE = "#B94A1A";
 const ORANGE_SOFT = "#FFF3EE";
@@ -667,6 +670,8 @@ export default function DashboardScreen({ navigation }: Props) {
   const { data: cabangTodayData, isLoading: loadingCabangToday } =
     useCabangTodayQuery(isAdmin);
   const { mutate: approvalCashFlow } = useApprovalCashFlowMutation();
+  const { mutate: exportExcel, isPending: loadingExcel } =
+    useHistoryExcelMutation();
 
   const [selectedCabang, setSelectedCabang] = useState<ICashFlow | null>(null);
 
@@ -676,8 +681,6 @@ export default function DashboardScreen({ navigation }: Props) {
   const handleApplyRange = useCallback((range: DateRange) => {
     setDateRange(range);
     setCalendarOpen(false);
-
-    console.log(range, "hit");
 
     // TODO: panggil API kamu di sini.
     // range.sd -> start date ("YYYY-MM-DD")
@@ -692,7 +695,33 @@ export default function DashboardScreen({ navigation }: Props) {
   }, []);
 
   const handleDownload = useCallback(() => {
-    console.log(dateRange, "test");
+    exportExcel(dateRange as never, {
+      onSuccess: async (bytes) => {
+        try {
+          const file = new File(Paths.cache, "cash-flow-history.xlsx");
+
+          if (file.exists) {
+            file.delete();
+          }
+
+          file.create();
+
+          file.write(bytes);
+
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(file.uri, {
+              mimeType:
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+              dialogTitle: "Cash Flow History",
+            });
+          }
+        } catch (error) {
+          console.error("DOWNLOAD EXCEL ERROR:", error);
+
+          ToastError("Failed to download Excel file.");
+        }
+      },
+    });
   }, [dateRange]);
 
   const dateRangeLabel = useMemo(() => {

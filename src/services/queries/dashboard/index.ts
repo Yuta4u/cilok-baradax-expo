@@ -11,6 +11,7 @@ import {
   getDashboard,
   getDetailById,
   getHistory,
+  getHistoryExcel,
   getViewCashFlowApi,
   submitCashFlow,
 } from "../../api/dashboard";
@@ -39,6 +40,13 @@ export const useCabangHistoryQuery = (enabled: boolean, query: BaseParams) => {
     enabled,
     refetchOnMount: true,
     retryOnMount: true,
+  });
+};
+
+export const useHistoryExcelMutation = () => {
+  return useMutation({
+    mutationFn: getHistoryExcel,
+    onError: handleError,
   });
 };
 

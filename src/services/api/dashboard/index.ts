@@ -1,5 +1,6 @@
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { fetch as fetchBuffer } from "expo/fetch";
 
 export async function getHistory(query: BaseParams) {
   const { accessToken } = useAuthStore.getState();
@@ -34,6 +35,42 @@ export async function getHistory(query: BaseParams) {
   }
 
   return data;
+}
+
+export async function getHistoryExcel(query: BaseParams) {
+  const { accessToken } = useAuthStore.getState();
+
+  const params = new URLSearchParams();
+
+  if (query.sd) {
+    params.append("sd", query.sd);
+  }
+
+  if (query.ed) {
+    params.append("ed", query.ed);
+  }
+
+  const res = await fetchBuffer(
+    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/history/excel?${params.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    },
+  );
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+
+    ToastError(
+      data?.message || "Something went wrong, please try again later.",
+    );
+
+    throw new Error(data?.message);
+  }
+
+  return await res.bytes();
 }
 
 export async function getCabangToday() {

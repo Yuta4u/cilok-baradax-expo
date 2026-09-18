@@ -111,7 +111,7 @@ export default function SignIn() {
       {/* Background */}
       <LinearGradient
         colors={["#b34219", "#b3421988", "#fff2de"]}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
       />
 
       <KeyboardAvoidingView

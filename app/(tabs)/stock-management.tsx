@@ -416,14 +416,14 @@ export default function StockManagement() {
               <Text style={styles.addStockText}>+ Tambah Stock</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
+            {/* <TouchableOpacity
               onPress={() => openDetailStockModal(cabang)}
               hitSlop={8}
               accessibilityRole="button"
               accessibilityLabel={`Detail stock ${cabang.name}`}
             >
               <Text style={styles.detailText}>Detail Stock →</Text>
-            </TouchableOpacity>
+            </TouchableOpacity> */}
           </View>
         </View>
       );
