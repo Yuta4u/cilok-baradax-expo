@@ -167,6 +167,8 @@ interface BaseParams {
   limit?: number;
   q?: string;
   type?: string;
+  sd?: string;
+  ed?: string;
 }
 
 interface ICashFlow {

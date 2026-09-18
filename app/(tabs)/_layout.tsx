@@ -64,6 +64,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"home-sharp"} color={color} size={24} />
           ),
+          href: authorized ? "/stock-log" : null, // BARU
+
           // selalu tampil untuk semua role — tidak diubah
         }}
       />

@@ -1,11 +1,21 @@
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
 
-export async function getHistory() {
+export async function getHistory(query: BaseParams) {
   const { accessToken } = useAuthStore.getState();
 
+  const params = new URLSearchParams();
+
+  if (query.sd) {
+    params.append("sd", query.sd);
+  }
+
+  if (query.ed) {
+    params.append("ed", query.ed);
+  }
+
   const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/history`,
+    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/history?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -19,6 +29,7 @@ export async function getHistory() {
 
   if (!res.ok) {
     ToastError(data.message || "Something went wrong, please try again later.");
+
     throw new Error(data.message);
   }
 
@@ -49,11 +60,21 @@ export async function getCabangToday() {
   return data;
 }
 
-export async function getDashboard() {
+export async function getDashboard(query: BaseParams) {
   const { accessToken } = useAuthStore.getState();
 
+  const params = new URLSearchParams();
+
+  if (query.sd) {
+    params.append("sd", query.sd);
+  }
+
+  if (query.ed) {
+    params.append("ed", query.ed);
+  }
+
   const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/dashboard`,
+    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/dashboard?${params.toString()}`,
     {
       method: "GET",
       headers: {

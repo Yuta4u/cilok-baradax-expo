@@ -15,10 +15,10 @@ import {
   submitCashFlow,
 } from "../../api/dashboard";
 
-export const useDashboardQuery = (enabled: boolean) => {
+export const useDashboardQuery = (enabled: boolean, query: BaseParams) => {
   return useQuery({
-    queryKey: ["dashboard:all"],
-    queryFn: getDashboard,
+    queryKey: ["dashboard:all", query],
+    queryFn: () => getDashboard(query),
     enabled,
     refetchOnMount: true,
     retryOnMount: true,
@@ -32,10 +32,10 @@ export const useApprovalCashFlowMutation = () => {
   });
 };
 
-export const useCabangHistoryQuery = (enabled: boolean) => {
+export const useCabangHistoryQuery = (enabled: boolean, query: BaseParams) => {
   return useQuery({
-    queryKey: ["cash-flow:history"],
-    queryFn: getHistory,
+    queryKey: ["cash-flow:history", query],
+    queryFn: () => getHistory(query),
     enabled,
     refetchOnMount: true,
     retryOnMount: true,

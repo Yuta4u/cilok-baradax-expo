@@ -37,14 +37,6 @@ const GREEN = "#059669";
 
 type RowId = string | number;
 
-type Cabang = {
-  id: number | string;
-  name?: string;
-  verified?: number;
-  totalOmset?: number | string;
-  totalTransaksi?: number | string;
-};
-
 type CashFlowDetail = {
   id: number | string;
   productId?: number | string;
@@ -59,45 +51,10 @@ type Props = {
   navigation?: { navigate: (route: string, params?: object) => void };
 };
 
-/* ─── Dummy data — Laporan Harian Jualan ───────────────────────────────────
- * Contoh: Sabtu 29 Agustus 2026, Outlet Kelapa 2, PIC Openg.
- * Ganti/pindahkan ke response API begitu field-nya sudah tersedia.
- * ------------------------------------------------------------------------ */
-const dummyCashFlowDetail = {
-  id: 1,
-  outlet: "Kelapa 2",
-  pic: "Openg",
-  tanggal: "2026-08-29",
-  verified: 0, // 0 = aktif, 1 = approval, 2 = submit first
-
-  stockAwal: [
-    { id: "sa-1", name: "Kecil", qty: 400 },
-    { id: "sa-2", name: "Gede", qty: 89 },
-    { id: "sa-3", name: "Tahu", qty: 15 },
-  ],
-  stockAwalTotal: 964,
-
-  stockSisa: [
-    { id: "ss-1", name: "Kecil", qty: 106 },
-    { id: "ss-2", name: "Gede", qty: 27 },
-    { id: "ss-3", name: "Tahu", qty: null }, // "-" di laporan = belum diisi
-  ],
-  stockSisaTotal: 268,
-
-  penjualan: {
-    cash: 563000,
-    qr: 133000,
-  },
-
-  pengeluaran: [
-    { id: "px-1", label: "Ngambil duit", amount: 90000 },
-    { id: "px-2", label: "-", amount: 5000 },
-  ],
-  pengeluaranTotal: 95000,
-
-  sisaCash: 468000,
-
-  note: "",
+/** Rentang tanggal yang dikirim ke API. Format: "YYYY-MM-DD" atau null. */
+type DateRange = {
+  sd: string | null;
+  ed: string | null;
 };
 
 const toNumber = (value: unknown): number => {
@@ -142,6 +99,328 @@ const formatCount = (value: unknown): string =>
   Math.round(toNumber(value)).toString();
 
 const digitsOnly = (value: string): string => value.replace(/[^0-9]/g, "");
+
+/* ─── Calendar helpers ─────────────────────────────────────────────────── */
+
+const MONTHS_ID = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
+];
+
+const MONTHS_ID_SHORT = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "Mei",
+  "Jun",
+  "Jul",
+  "Agu",
+  "Sep",
+  "Okt",
+  "Nov",
+  "Des",
+];
+
+// Minggu dimulai dari Senin (standar Indonesia)
+const WEEKDAYS_ID = ["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"];
+
+const pad2 = (n: number): string => (n < 10 ? `0${n}` : `${n}`);
+
+/** Date lokal -> "YYYY-MM-DD" (tanpa geser timezone seperti toISOString). */
+const toYMD = (date: Date): string =>
+  `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+
+const makeYMD = (year: number, month: number, day: number): string =>
+  `${year}-${pad2(month + 1)}-${pad2(day)}`;
+
+/** "YYYY-MM-DD" -> "29 Agu 2026" (parse manual, aman dari timezone). */
+const formatYMDLabel = (ymd: string | null): string => {
+  if (!ymd) return "-";
+  const [y, m, d] = ymd.split("-").map(Number);
+  if (!y || !m || !d) return "-";
+  return `${d} ${MONTHS_ID_SHORT[m - 1]} ${y}`;
+};
+
+const getDaysInMonth = (year: number, month: number): number =>
+  new Date(year, month + 1, 0).getDate();
+
+/** Offset kolom hari pertama bulan (Senin = 0 ... Minggu = 6). */
+const getFirstDayOffset = (year: number, month: number): number =>
+  (new Date(year, month, 1).getDay() + 6) % 7;
+
+/* ─── DateRangeCalendar ────────────────────────────────────────────────────
+ * Calendar simpel tanpa library tambahan.
+ * - Tap 1x  -> set start date (sd)
+ * - Tap 2x  -> set end date (ed)
+ * - Tap lagi setelah range lengkap -> mulai range baru
+ * - onApply mengembalikan { sd, ed } format "YYYY-MM-DD"
+ * ------------------------------------------------------------------------ */
+
+type DateRangeCalendarProps = {
+  visible: boolean;
+  value: DateRange;
+  onClose: () => void;
+  onApply: (range: DateRange) => void;
+};
+
+const DateRangeCalendar = ({
+  visible,
+  value,
+  onClose,
+  onApply,
+}: DateRangeCalendarProps) => {
+  const todayYMD = useMemo(() => toYMD(new Date()), []);
+
+  const initialView = useMemo(() => {
+    const base = value.sd ? value.sd.split("-").map(Number) : null;
+    const now = new Date();
+    return {
+      year: base ? base[0] : now.getFullYear(),
+      month: base ? base[1] - 1 : now.getMonth(),
+    };
+  }, [value.sd]);
+
+  const [viewYear, setViewYear] = useState(initialView.year);
+  const [viewMonth, setViewMonth] = useState(initialView.month);
+  const [sd, setSd] = useState<string | null>(value.sd);
+  const [ed, setEd] = useState<string | null>(value.ed);
+
+  // Sinkronkan state draft tiap kali sheet dibuka.
+  React.useEffect(() => {
+    if (visible) {
+      setSd(value.sd);
+      setEd(value.ed);
+      setViewYear(initialView.year);
+      setViewMonth(initialView.month);
+    }
+  }, [visible, value.sd, value.ed, initialView]);
+
+  const goPrevMonth = useCallback(() => {
+    setViewMonth((m) => {
+      if (m === 0) {
+        setViewYear((y) => y - 1);
+        return 11;
+      }
+      return m - 1;
+    });
+  }, []);
+
+  const goNextMonth = useCallback(() => {
+    setViewMonth((m) => {
+      if (m === 11) {
+        setViewYear((y) => y + 1);
+        return 0;
+      }
+      return m + 1;
+    });
+  }, []);
+
+  const handlePickDay = useCallback(
+    (ymd: string) => {
+      // Belum ada sd, atau range sudah lengkap -> mulai range baru
+      if (!sd || (sd && ed)) {
+        setSd(ymd);
+        setEd(null);
+        return;
+      }
+      // Sudah ada sd, belum ada ed
+      if (ymd < sd) {
+        setSd(ymd); // tap sebelum sd -> jadikan sd baru
+        return;
+      }
+      setEd(ymd); // ymd >= sd (sama = 1 hari saja)
+    },
+    [sd, ed],
+  );
+
+  const handleReset = useCallback(() => {
+    setSd(null);
+    setEd(null);
+  }, []);
+
+  const handleApply = useCallback(() => {
+    if (!sd) return;
+    onApply({ sd, ed: ed ?? sd });
+  }, [sd, ed, onApply]);
+
+  // Susun sel kalender: padding kosong + tanggal 1..N
+  const cells = useMemo(() => {
+    const offset = getFirstDayOffset(viewYear, viewMonth);
+    const total = getDaysInMonth(viewYear, viewMonth);
+    const list: Array<number | null> = [];
+    for (let i = 0; i < offset; i++) list.push(null);
+    for (let d = 1; d <= total; d++) list.push(d);
+    while (list.length % 7 !== 0) list.push(null);
+    return list;
+  }, [viewYear, viewMonth]);
+
+  const weeks = useMemo(() => {
+    const rows: Array<Array<number | null>> = [];
+    for (let i = 0; i < cells.length; i += 7) rows.push(cells.slice(i, i + 7));
+    return rows;
+  }, [cells]);
+
+  const hasRange = !!sd && !!ed && sd !== ed;
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
+      <Pressable
+        style={styles.backdrop}
+        onPress={onClose}
+        accessibilityRole="button"
+        accessibilityLabel="Tutup kalender"
+      >
+        <Pressable style={styles.sheet} onPress={() => {}}>
+          <View style={styles.sheetHandle} />
+
+          <Text style={styles.sheetTitle}>Pilih Tanggal</Text>
+
+          {/* Ringkasan sd -> ed */}
+          <View style={styles.calSummary}>
+            <View style={styles.calSummaryItem}>
+              <Text style={styles.calSummaryLabel}>Dari (sd)</Text>
+              <Text style={styles.calSummaryValue}>{formatYMDLabel(sd)}</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={16} color="#9CA3AF" />
+            <View style={styles.calSummaryItem}>
+              <Text style={styles.calSummaryLabel}>Sampai (ed)</Text>
+              <Text style={styles.calSummaryValue}>{formatYMDLabel(ed)}</Text>
+            </View>
+          </View>
+
+          {/* Header bulan */}
+          <View style={styles.calMonthRow}>
+            <TouchableOpacity
+              onPress={goPrevMonth}
+              hitSlop={10}
+              style={styles.calNavBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Bulan sebelumnya"
+            >
+              <Ionicons name="chevron-back" size={18} color="#111827" />
+            </TouchableOpacity>
+
+            <Text style={styles.calMonthTitle}>
+              {MONTHS_ID[viewMonth]} {viewYear}
+            </Text>
+
+            <TouchableOpacity
+              onPress={goNextMonth}
+              hitSlop={10}
+              style={styles.calNavBtn}
+              accessibilityRole="button"
+              accessibilityLabel="Bulan berikutnya"
+            >
+              <Ionicons name="chevron-forward" size={18} color="#111827" />
+            </TouchableOpacity>
+          </View>
+
+          {/* Nama hari */}
+          <View style={styles.calWeekRow}>
+            {WEEKDAYS_ID.map((d) => (
+              <View key={d} style={styles.calCell}>
+                <Text style={styles.calWeekday}>{d}</Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Grid tanggal */}
+          {weeks.map((week, wi) => (
+            <View key={`w-${wi}`} style={styles.calWeekRow}>
+              {week.map((day, di) => {
+                if (day === null) {
+                  return <View key={`e-${wi}-${di}`} style={styles.calCell} />;
+                }
+
+                const ymd = makeYMD(viewYear, viewMonth, day);
+                const isStart = ymd === sd;
+                const isEnd = ymd === ed;
+                const isEdge = isStart || isEnd;
+                const inRange = !!sd && !!ed && ymd > sd && ymd < ed;
+                const isToday = ymd === todayYMD;
+
+                return (
+                  <Pressable
+                    key={ymd}
+                    onPress={() => handlePickDay(ymd)}
+                    style={[
+                      styles.calCell,
+                      (inRange || (hasRange && isEdge)) && styles.calCellBand,
+                      hasRange && isStart && styles.calCellBandStart,
+                      hasRange && isEnd && styles.calCellBandEnd,
+                    ]}
+                    accessibilityRole="button"
+                    accessibilityLabel={formatYMDLabel(ymd)}
+                    accessibilityState={{ selected: isEdge }}
+                  >
+                    <View
+                      style={[
+                        styles.calDay,
+                        isEdge && styles.calDayEdge,
+                        !isEdge && isToday && styles.calDayToday,
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.calDayText,
+                          inRange && styles.calDayTextInRange,
+                          isEdge && styles.calDayTextEdge,
+                        ]}
+                      >
+                        {day}
+                      </Text>
+                    </View>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ))}
+
+          {/* Actions */}
+          <View style={styles.calActions}>
+            <TouchableOpacity
+              style={[styles.actionBtn, styles.calBtnGhost]}
+              onPress={handleReset}
+              accessibilityRole="button"
+            >
+              <Text style={styles.calBtnGhostText}>Reset</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.actionBtn,
+                styles.actionBtnPrimary,
+                !sd && styles.btnDisabled,
+              ]}
+              onPress={handleApply}
+              disabled={!sd}
+              accessibilityRole="button"
+            >
+              <Text style={styles.actionBtnPrimaryText}>Terapkan</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Pressable>
+    </Modal>
+  );
+};
 
 type StockRowProps = {
   id: RowId;
@@ -297,7 +576,7 @@ const CashFlowCard = React.memo(function CabangCard({
             <Ionicons name="cash-outline" size={16} color="#10B981" />
           </View>
           <View style={styles.cabangStatText}>
-            <Text style={styles.cabangStatLabel}>Omset Hari Ini</Text>
+            <Text style={styles.cabangStatLabel}>Omset</Text>
             <Text
               style={[styles.cabangStatValue, { color: "#10B981" }]}
               numberOfLines={1}
@@ -365,6 +644,10 @@ export default function DashboardScreen({ navigation }: Props) {
   const { mutate: submitCashFlow } = useSubmitCashFlowMutation();
 
   const [selectedCabangId, setSelectedCabangId] = useState<string | null>(null);
+  /* -------------------- Calendar (sd / ed) — khusus CABANG -------------------- */
+
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [dateRange, setDateRange] = useState<DateRange>({ sd: null, ed: null });
 
   const {
     data: detailData,
@@ -377,15 +660,48 @@ export default function DashboardScreen({ navigation }: Props) {
     isLoading: loadingCabang,
     isRefetching,
     refetch,
-  } = useCabangHistoryQuery(isCabang);
+  } = useCabangHistoryQuery(isCabang, dateRange as never);
   const { data: dashboardData, isLoading: loadingDashboard } =
-    useDashboardQuery(isCabang);
+    useDashboardQuery(isCabang, dateRange as never);
 
   const { data: cabangTodayData, isLoading: loadingCabangToday } =
     useCabangTodayQuery(isAdmin);
   const { mutate: approvalCashFlow } = useApprovalCashFlowMutation();
 
   const [selectedCabang, setSelectedCabang] = useState<ICashFlow | null>(null);
+
+  const openCalendar = useCallback(() => setCalendarOpen(true), []);
+  const closeCalendar = useCallback(() => setCalendarOpen(false), []);
+
+  const handleApplyRange = useCallback((range: DateRange) => {
+    setDateRange(range);
+    setCalendarOpen(false);
+
+    console.log(range, "hit");
+
+    // TODO: panggil API kamu di sini.
+    // range.sd -> start date ("YYYY-MM-DD")
+    // range.ed -> end date   ("YYYY-MM-DD")
+    // Contoh: setelah API-nya jadi, kirim `dateRange` sebagai param ke
+    // useCabangHistoryQuery(isCabang, dateRange) lalu queryKey-nya ikut
+    // berubah dan data akan refetch otomatis.
+  }, []);
+
+  const clearDateRange = useCallback(() => {
+    setDateRange({ sd: null, ed: null });
+  }, []);
+
+  const handleDownload = useCallback(() => {
+    console.log(dateRange, "test");
+  }, [dateRange]);
+
+  const dateRangeLabel = useMemo(() => {
+    if (!dateRange.sd) return "Semua tanggal";
+    if (!dateRange.ed || dateRange.ed === dateRange.sd) {
+      return formatYMDLabel(dateRange.sd);
+    }
+    return `${formatYMDLabel(dateRange.sd)} - ${formatYMDLabel(dateRange.ed)}`;
+  }, [dateRange]);
 
   const openDetail = useCallback((cabang: ICashFlow) => {
     const isVerified = cabang.verified === 0;
@@ -570,21 +886,16 @@ export default function DashboardScreen({ navigation }: Props) {
     [],
   );
 
-  // TODO: ganti dummyCashFlowDetail dengan mapping dari `selectedCabang`
-  // begitu field laporan (outlet, pic, stockAwal, stockSisa, penjualan,
-  // pengeluaran, sisaCash) sudah tersedia dari API.
-  const detail = dummyCashFlowDetail;
-
   const detailTotalPrice = useMemo(() => {
     return detailData?.cashFlowItems.reduce(
-      (acc, item) => acc + item.out * item.price,
+      (acc: number, item: any) => acc + item.out * item.price,
       0,
     );
   }, [detailData]);
 
   const detailTotalPriceSisa = useMemo(() => {
     return detailData?.cashFlowItems.reduce(
-      (acc, item) => acc + (item.in - item.out) * item.price,
+      (acc: number, item: any) => acc + (item.in - item.out) * item.price,
       0,
     );
   }, [detailData]);
@@ -614,10 +925,59 @@ export default function DashboardScreen({ navigation }: Props) {
           </View>
         </View>
 
+        {/* ── Filter Tanggal (sd / ed) — hanya untuk CABANG ── */}
+        {isCabang && (
+          <View style={styles.dateFilterRow}>
+            <TouchableOpacity
+              style={styles.dateFilterBtn}
+              onPress={openCalendar}
+              activeOpacity={0.85}
+              accessibilityRole="button"
+              accessibilityLabel="Pilih rentang tanggal"
+            >
+              <Ionicons name="calendar-outline" size={18} color={ORANGE} />
+              <Text
+                style={[
+                  styles.dateFilterText,
+                  !dateRange.sd && styles.dateFilterTextPlaceholder,
+                ]}
+                numberOfLines={1}
+              >
+                {dateRangeLabel}
+              </Text>
+              <Ionicons name="chevron-down" size={16} color="#9CA3AF" />
+            </TouchableOpacity>
+
+            {dateRange.sd ? (
+              <TouchableOpacity
+                style={styles.dateFilterClear}
+                onPress={handleDownload}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Hapus filter tanggal"
+              >
+                <Ionicons name="download-outline" size={18} color="#6B7280" />
+              </TouchableOpacity>
+            ) : null}
+
+            {dateRange.sd ? (
+              <TouchableOpacity
+                style={styles.dateFilterClear}
+                onPress={clearDateRange}
+                hitSlop={8}
+                accessibilityRole="button"
+                accessibilityLabel="Hapus filter tanggal"
+              >
+                <Ionicons name="close" size={18} color="#6B7280" />
+              </TouchableOpacity>
+            ) : null}
+          </View>
+        )}
+
         {isCabang && (
           <View style={styles.statsGrid}>
             <View style={[styles.statCard, { borderLeftColor: "#10B981" }]}>
-              <Text style={styles.statLabel}>Omset Hari Ini</Text>
+              <Text style={styles.statLabel}>Omset</Text>
               <View style={styles.statRow}>
                 <Text
                   style={styles.statValueMoney}
@@ -633,8 +993,8 @@ export default function DashboardScreen({ navigation }: Props) {
               </View>
             </View>
 
-            <View style={[styles.statCard, { borderLeftColor: "#10B981" }]}>
-              <Text style={styles.statLabel}>Omset Hari Ini</Text>
+            <View style={[styles.statCard, { borderLeftColor: "#bd2727c9" }]}>
+              <Text style={styles.statLabel}>Pengeluaran</Text>
               <View style={styles.statRow}>
                 <Text
                   style={styles.statValueMoney}
@@ -644,9 +1004,9 @@ export default function DashboardScreen({ navigation }: Props) {
                 >
                   {loadingDashboard
                     ? "—"
-                    : formatRupiah(dashboardData?.data?.totalOmset)}
+                    : formatRupiah(dashboardData?.data?.totalPengeluaran)}
                 </Text>
-                <Ionicons name="cash-outline" size={28} color="#10B981" />
+                <Ionicons name="cash-outline" size={28} color="#bd2727c9" />
               </View>
             </View>
 
@@ -688,10 +1048,7 @@ export default function DashboardScreen({ navigation }: Props) {
                 hitSlop={8}
                 accessibilityRole="button"
                 accessibilityLabel="Lihat semua history"
-              >
-                <Text style={styles.lihatSemuaText}>Lihat Semua</Text>
-                <Ionicons name="chevron-forward" size={14} color={ORANGE} />
-              </TouchableOpacity>
+              ></TouchableOpacity>
             </View>
           }
           ListEmptyComponent={
@@ -715,6 +1072,16 @@ export default function DashboardScreen({ navigation }: Props) {
               tintColor={ORANGE}
             />
           }
+        />
+      )}
+
+      {/* ── Modal Calendar (sd / ed) — hanya di-mount untuk CABANG ── */}
+      {isCabang && (
+        <DateRangeCalendar
+          visible={calendarOpen}
+          value={dateRange}
+          onClose={closeCalendar}
+          onApply={handleApplyRange}
         />
       )}
 
@@ -749,7 +1116,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
               <View style={styles.flex}>
                 <Text style={styles.sheetTitle} numberOfLines={2}>
-                  {selectedCabang?.user?.name || detail.outlet}
+                  {selectedCabang?.user?.name || "-"}
                 </Text>
               </View>
 
@@ -784,7 +1151,7 @@ export default function DashboardScreen({ navigation }: Props) {
             >
               {/* Stock Awal */}
               <Text style={styles.detailSectionTitle}>Stock Awal</Text>
-              {detailData?.cashFlowItems.map((item) => (
+              {detailData?.cashFlowItems.map((item: any) => (
                 <DetailRow
                   key={item.id}
                   label={item.product?.name}
@@ -800,7 +1167,7 @@ export default function DashboardScreen({ navigation }: Props) {
 
               {/* Stock Sisa */}
               <Text style={styles.detailSectionTitle}>Stock Sisa</Text>
-              {detailData?.cashFlowItems.map((item) => (
+              {detailData?.cashFlowItems.map((item: any) => (
                 <DetailRow
                   key={item.id}
                   label={item.product.name}
@@ -1056,6 +1423,43 @@ const styles = StyleSheet.create({
   shopIcon: { backgroundColor: ORANGE_SOFT, borderRadius: 10, padding: 10 },
   greetSub: { color: "#888", fontSize: 13 },
   greetName: { color: "#222", fontSize: 18, fontWeight: "700" },
+
+  // DATE FILTER (trigger calendar)
+  dateFilterRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 16,
+  },
+  dateFilterBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  dateFilterText: {
+    flex: 1,
+    fontSize: 13,
+    fontWeight: "700",
+    color: "#111827",
+  },
+  dateFilterTextPlaceholder: { color: "#9CA3AF", fontWeight: "600" },
+  dateFilterClear: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
 
   statsGrid: {
     flexDirection: "row",
@@ -1377,4 +1781,70 @@ const styles = StyleSheet.create({
   },
   sisaCashLabel: { fontSize: 13, fontWeight: "700", color: "#065F46" },
   sisaCashValue: { fontSize: 16, fontWeight: "800", color: GREEN },
+
+  // CALENDAR (Date range sd / ed)
+  calSummary: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+    backgroundColor: "#F9FAFB",
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginTop: 12,
+    marginBottom: 16,
+  },
+  calSummaryItem: { flex: 1 },
+  calSummaryLabel: { fontSize: 11, color: "#9CA3AF", marginBottom: 2 },
+  calSummaryValue: { fontSize: 14, fontWeight: "800", color: "#111827" },
+
+  calMonthRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  calNavBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#F3F4F6",
+  },
+  calMonthTitle: { fontSize: 15, fontWeight: "800", color: "#111827" },
+
+  calWeekRow: { flexDirection: "row" },
+  calCell: {
+    width: `${100 / 7}%`,
+    height: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calCellBand: { backgroundColor: ORANGE_SOFT },
+  calCellBandStart: { borderTopLeftRadius: 20, borderBottomLeftRadius: 20 },
+  calCellBandEnd: { borderTopRightRadius: 20, borderBottomRightRadius: 20 },
+  calWeekday: { fontSize: 11, fontWeight: "700", color: "#9CA3AF" },
+
+  calDay: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  calDayEdge: { backgroundColor: ORANGE },
+  calDayToday: { borderWidth: 1, borderColor: ORANGE },
+  calDayText: { fontSize: 13, fontWeight: "600", color: "#111827" },
+  calDayTextInRange: { color: ORANGE, fontWeight: "700" },
+  calDayTextEdge: { color: "#fff", fontWeight: "800" },
+
+  calActions: { flexDirection: "row", gap: 10, marginTop: 18 },
+  calBtnGhost: {
+    backgroundColor: ORANGE_SOFT,
+    borderWidth: 1,
+    borderColor: "#FADDD1",
+  },
+  calBtnGhostText: { color: ORANGE, fontWeight: "800" },
 });
