@@ -8,7 +8,7 @@ export async function SignInApi({
   email: string;
   password: string;
 }): Promise<Response> {
-  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/auth/login`, {
+  const res = await fetch(`https://baradax.online/api/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {
@@ -30,7 +30,7 @@ export async function SignInApi({
 export async function getAllUserApi() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/user/all`, {
+  const res = await fetch(`https://baradax.online/api/user/all`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -51,7 +51,7 @@ export async function getAllUserApi() {
 export async function addUserApi(payload: AddUser) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/user`, {
+  const res = await fetch(`https://baradax.online/api/user`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -76,17 +76,14 @@ export async function changePassword(payload: {
 }) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/user/change-password`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(payload),
+  const res = await fetch(`https://baradax.online/api/user/change-password`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
     },
-  );
+    body: JSON.stringify(payload),
+  });
 
   const data = await res.json();
 
@@ -102,7 +99,7 @@ export async function setActiveApi(payload: { id: string; active: number }) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/user/active/${payload.id}`,
+    `https://baradax.online/api/user/active/${payload.id}`,
     {
       method: "POST",
       headers: {

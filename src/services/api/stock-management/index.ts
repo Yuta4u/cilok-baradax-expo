@@ -4,16 +4,13 @@ import { ToastError } from "../../../utils/toast";
 export async function getCabang() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/user/cabang`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
+  const res = await fetch(`https://baradax.online/api/user/cabang`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
     },
-  );
+  });
 
   const data = await res.json();
 
@@ -29,7 +26,7 @@ export async function updateStockCilokApi(payload: UpdateStockCilok) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/user/stock-cilok/${payload.id}`,
+    `https://baradax.online/api/user/stock-cilok/${payload.id}`,
     {
       method: "PUT",
       headers: {
@@ -53,16 +50,13 @@ export async function updateStockCilokApi(payload: UpdateStockCilok) {
 export async function getCabangToday() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/cabang/today`,
-    {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
+  const res = await fetch(`https://baradax.online/api/cash-flow/cabang/today`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
     },
-  );
+  });
 
   const data = await res.json();
 
@@ -77,7 +71,7 @@ export async function getCabangToday() {
 export async function addCashFlow(payload: AddCashFlow) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow`, {
+  const res = await fetch(`https://baradax.online/api/cash-flow`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -100,7 +94,7 @@ export async function getCashFlowDetail(id: string) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow/cabang/today/detail/${id}`,
+    `https://baradax.online/api/cash-flow/cabang/today/detail/${id}`,
     {
       method: "GET",
       headers: {
@@ -123,17 +117,14 @@ export async function getCashFlowDetail(id: string) {
 export async function updateCashFlowItem(payload: Record<string, number>) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/cash-flow-item/stock`,
-    {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(payload),
+  const res = await fetch(`https://baradax.online/api/cash-flow-item/stock`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
     },
-  );
+    body: JSON.stringify(payload),
+  });
 
   const data = await res.json();
 

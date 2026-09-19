@@ -47,7 +47,7 @@ export async function getStockHistoryApi({
   if (search) params.set("search", search);
 
   const res = await fetch(
-    `${process.env.EXPO_PUBLIC_API_URL}/api/stock-histories?${params.toString()}`,
+    `https://baradax.online/api/stock-histories?${params.toString()}`,
     {
       method: "GET",
       headers: {
