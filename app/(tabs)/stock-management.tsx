@@ -494,10 +494,7 @@ export default function StockManagement() {
         onRequestClose={closeStockModal}
       >
         <SafeAreaView style={styles.modalSafeArea}>
-          <KeyboardAvoidingView
-            style={styles.flex}
-            behavior={Platform.OS === "ios" ? "padding" : undefined}
-          >
+          <KeyboardAvoidingView style={styles.flex} behavior={"padding"}>
             <View style={styles.modalHeader}>
               <View style={styles.flex}>
                 <Text style={styles.modalTitle}>Tambah Stock</Text>

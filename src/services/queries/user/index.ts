@@ -4,6 +4,7 @@ import {
   changePassword,
   getAllUserApi,
   setActiveApi,
+  updateUser,
 } from "../../api/user";
 import { handleError } from "../../../utils/error";
 
@@ -26,6 +27,13 @@ export const useAddUserMutation = () => {
 export const useChangePasswordMutation = () => {
   return useMutation({
     mutationFn: changePassword,
+    onError: handleError,
+  });
+};
+
+export const useUpdateUserMutation = () => {
+  return useMutation({
+    mutationFn: updateUser,
     onError: handleError,
   });
 };

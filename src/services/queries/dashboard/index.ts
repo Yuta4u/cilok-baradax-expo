@@ -23,6 +23,8 @@ export const useDashboardQuery = (enabled: boolean, query: BaseParams) => {
     enabled,
     refetchOnMount: true,
     retryOnMount: true,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
   });
 };
 

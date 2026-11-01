@@ -27,15 +27,10 @@ import { deFormatRupiah2, formatRupiah2 } from "../../src/utils/format";
 
 const BRAND = "#B94A1C";
 const PRODUCT_QUERY_KEY = ["inventory:product"];
-const QUICK_QTY = [1, 5, 10, 25];
+const QUICK_QTY = [10, 50, 100, 500, 1000];
 
 const FILTER_OPTIONS = ["Semua", "Aman", "Menipis"] as const;
 type FilterType = (typeof FILTER_OPTIONS)[number];
-
-// NOTE: `Product` is assumed to be a global type. If it isn't declared globally,
-// import it from your types module instead of relying on ambient declaration.
-
-/* ─── Debounce ──────────────────────────────────────────────────────────── */
 
 function useDebounced<T>(value: T, delay = 400): T {
   const [debounced, setDebounced] = useState(value);
@@ -47,8 +42,6 @@ function useDebounced<T>(value: T, delay = 400): T {
 
   return debounced;
 }
-
-/* ─── Status badge ──────────────────────────────────────────────────────── */
 
 const StatusBadge = React.memo<{ status: boolean }>(({ status }) => (
   <View
@@ -66,37 +59,47 @@ const badge = StyleSheet.create({
   text: { fontSize: 12, fontWeight: "600" },
 });
 
-/* ─── Row ───────────────────────────────────────────────────────────────── */
-
 type RowProps = {
   item: Product;
   index: number;
   onAddStock: (item: Product) => void;
+  onEditStock: (item: Product) => void;
 };
 
-const ProductRow = React.memo<RowProps>(({ item, index, onAddStock }) => (
-  <View style={[s.row, index % 2 === 0 ? s.rowEven : s.rowOdd]}>
-    <Text style={s.colProduk} numberOfLines={2}>
-      {item.name}
-    </Text>
-    <Text style={s.colStok}>{item.stock}</Text>
-    <Text style={s.colSatuan}>{item.uom}</Text>
-    <View style={s.colStatus}>
-      <StatusBadge status={item.status} />
+const ProductRow = React.memo<RowProps>(
+  ({ item, index, onAddStock, onEditStock }) => (
+    <View style={[s.row, index % 2 === 0 ? s.rowEven : s.rowOdd]}>
+      <Text style={s.colProduk} numberOfLines={2}>
+        {item.name}
+      </Text>
+      <Text style={s.colStok}>{item.stock}</Text>
+      <Text style={s.colSatuan}>{item.uom}</Text>
+      <View style={s.colStatus}>
+        <StatusBadge status={item.status} />
+      </View>
+      <View style={s.colAksi}>
+        <TouchableOpacity
+          style={s.rowAddBtn}
+          onPress={() => onEditStock(item)}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Edit stok ${item.name}`}
+        >
+          <Ionicons name="create-outline" size={16} color={BRAND} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={s.rowAddBtn}
+          onPress={() => onAddStock(item)}
+          hitSlop={{ top: 8, bottom: 8, left: 4, right: 4 }}
+          accessibilityRole="button"
+          accessibilityLabel={`Tambah stok ${item.name}`}
+        >
+          <Ionicons name="add" size={18} color={BRAND} />
+        </TouchableOpacity>
+      </View>
     </View>
-    <View style={s.colAksi}>
-      <TouchableOpacity
-        style={s.rowAddBtn}
-        onPress={() => onAddStock(item)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        accessibilityRole="button"
-        accessibilityLabel={`Tambah stok ${item.name}`}
-      >
-        <Ionicons name="add" size={18} color={BRAND} />
-      </TouchableOpacity>
-    </View>
-  </View>
-));
+  ),
+);
 ProductRow.displayName = "ProductRow";
 
 /* ─── Modal Stok Masuk ──────────────────────────────────────────────────── */
@@ -242,7 +245,6 @@ const StockInModal: React.FC<StockInModalProps> = ({
             <Text style={m.label}>Catatan</Text>
             <TextInput
               style={[m.input, m.noteInput]}
-              placeholder="Contoh: Belanja dari supplier Pak Budi"
               placeholderTextColor="#9CA3AF"
               value={note}
               onChangeText={setNote}
@@ -286,6 +288,184 @@ const StockInModal: React.FC<StockInModalProps> = ({
   );
 };
 
+/* ─── Modal Edit Stok ───────────────────────────────────────────────────── */
+
+type EditStockModalProps = {
+  product: Product | null;
+  isPending: boolean;
+  onClose: () => void;
+  onSubmit: (payload: { newStock: number; note: string }) => void;
+};
+
+const EditStockModal: React.FC<EditStockModalProps> = ({
+  product,
+  isPending,
+  onClose,
+  onSubmit,
+}) => {
+  const [stock, setStock] = useState("");
+  const [note, setNote] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (product) {
+      setStock(String(product.stock ?? 0));
+      setNote("");
+      setError("");
+    }
+  }, [product]);
+
+  const currentStock = Number(product?.stock ?? 0);
+  const newStock = Number(stock) || 0;
+  const diff = newStock - currentStock;
+
+  const handleSave = () => {
+    if (!stock.trim()) {
+      setError("Isi jumlah stok yang benar.");
+      return;
+    }
+    if (diff === 0) {
+      setError("Stok baru sama dengan stok saat ini.");
+      return;
+    }
+    setError("");
+    onSubmit({ newStock, note: note.trim() });
+  };
+
+  return (
+    <Modal
+      visible={!!product}
+      animationType="slide"
+      transparent
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={"padding"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <View style={m.overlay}>
+          <TouchableOpacity
+            style={{ flex: 1 }}
+            activeOpacity={1}
+            onPress={onClose}
+          />
+
+          <ScrollView
+            style={m.sheetScroll}
+            contentContainerStyle={m.sheet}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={m.sheetHeader}>
+              <Text style={m.sheetTitle}>Edit Stock</Text>
+              <TouchableOpacity
+                onPress={onClose}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Tutup"
+              >
+                <Ionicons name="close" size={24} color="#374151" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Ringkasan produk */}
+            <View style={m.productCard}>
+              <Text style={m.productName} numberOfLines={2}>
+                {product?.name}
+              </Text>
+              <Text style={m.productMeta}>
+                Stok saat ini: {currentStock} {product?.uom}
+              </Text>
+            </View>
+
+            <Text style={m.label}>
+              Stok Sebenarnya <Text style={{ color: BRAND }}>*</Text>
+            </Text>
+            <View style={[m.qtyRow, !!error && m.inputError]}>
+              <TouchableOpacity
+                style={m.qtyStepBtn}
+                onPress={() => setStock(String(Math.max(0, newStock - 1)))}
+                disabled={newStock <= 0}
+                accessibilityRole="button"
+                accessibilityLabel="Kurangi stok"
+              >
+                <Ionicons
+                  name="remove"
+                  size={20}
+                  color={newStock <= 0 ? "#D1D5DB" : BRAND}
+                />
+              </TouchableOpacity>
+
+              <TextInput
+                style={m.qtyInput}
+                placeholder="0"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+                value={stock}
+                onChangeText={(t) => setStock(t.replace(/[^0-9]/g, ""))}
+                selectTextOnFocus
+              />
+
+              <Text style={m.qtyUom}>{product?.uom}</Text>
+
+              <TouchableOpacity
+                style={m.qtyStepBtn}
+                onPress={() => setStock(String(newStock + 1))}
+                accessibilityRole="button"
+                accessibilityLabel="Tambah stok"
+              >
+                <Ionicons name="add" size={20} color={BRAND} />
+              </TouchableOpacity>
+            </View>
+            {!!error && <Text style={m.errorText}>{error}</Text>}
+
+            <Text style={m.label}>Catatan</Text>
+            <TextInput
+              style={[m.input, m.noteInput]}
+              placeholderTextColor="#9CA3AF"
+              value={note}
+              onChangeText={setNote}
+              multiline
+              maxLength={140}
+            />
+
+            {/* Pratinjau selisih */}
+            {diff !== 0 && !!stock.trim() && (
+              <View style={[m.preview, diff < 0 && m.previewDown]}>
+                <Ionicons
+                  name={diff > 0 ? "trending-up" : "trending-down"}
+                  size={18}
+                  color={diff > 0 ? "#059669" : "#EA580C"}
+                />
+                <Text style={[m.previewText, diff < 0 && m.previewTextDown]}>
+                  {diff > 0 ? "Bertambah" : "Berkurang"} {Math.abs(diff)}{" "}
+                  {product?.uom} ({currentStock} → {newStock})
+                </Text>
+              </View>
+            )}
+
+            <TouchableOpacity
+              style={[m.saveBtn, isPending && m.saveBtnDisabled]}
+              onPress={handleSave}
+              disabled={isPending}
+              accessibilityRole="button"
+            >
+              {isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <>
+                  <Ionicons name="create-outline" size={20} color="#fff" />
+                  <Text style={m.saveBtnText}>Simpan perubahan stok</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
 /* ─── Screen ────────────────────────────────────────────────────────────── */
 
 export default function DataStokScreen() {
@@ -296,6 +476,7 @@ export default function DataStokScreen() {
   const [type, setType] = useState<FilterType>("Semua");
   const [modalVisible, setModalVisible] = useState(false);
   const [stockTarget, setStockTarget] = useState<Product | null>(null);
+  const [editTarget, setEditTarget] = useState<Product | null>(null);
 
   const {
     data: product,
@@ -307,6 +488,8 @@ export default function DataStokScreen() {
 
   const { mutate: addProduct, isPending } = useProductMutation();
   const { mutate: addStock, isPending: isStockPending } =
+    useUpdateStockMutation();
+  const { mutate: editStock, isPending: isEditStockPending } =
     useUpdateStockMutation();
 
   // Form state
@@ -393,14 +576,50 @@ export default function DataStokScreen() {
         },
       });
     },
-    [stockTarget, queryClient],
+    [stockTarget, addStock, queryClient],
+  );
+
+  const handleEditStock = useCallback((item: Product) => {
+    setEditTarget(item);
+  }, []);
+
+  const handleSubmitEdit = useCallback(
+    ({ newStock, note }: { newStock: number; note: string }) => {
+      if (!editTarget) return;
+
+      const diff = newStock - Number(editTarget.stock ?? 0);
+      if (diff === 0) return;
+
+      editStock(
+        {
+          id: editTarget.id,
+          quantity: Math.abs(diff),
+          type: diff > 0 ? "inc" : "dec",
+          note: note || "Koreksi stok",
+        },
+        {
+          onSuccess: () => {
+            const productName = editTarget.name;
+            setEditTarget(null);
+            ToastSuccess(`Stok ${productName} diperbarui menjadi ${newStock}`);
+            queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEY });
+          },
+        },
+      );
+    },
+    [editTarget, addStock, queryClient],
   );
 
   const renderItem = useCallback(
     ({ item, index }: { item: Product; index: number }) => (
-      <ProductRow item={item} index={index} onAddStock={handleAddStock} />
+      <ProductRow
+        item={item}
+        index={index}
+        onAddStock={handleAddStock}
+        onEditStock={handleEditStock}
+      />
     ),
-    [handleAddStock],
+    [handleAddStock, handleEditStock],
   );
 
   const renderEmpty = () => {
@@ -545,9 +764,17 @@ export default function DataStokScreen() {
       {/* Modal Stok Masuk */}
       <StockInModal
         product={stockTarget}
-        isPending={false}
+        isPending={isStockPending}
         onClose={() => setStockTarget(null)}
         onSubmit={handleSubmitStock}
+      />
+
+      {/* Modal Edit Stok */}
+      <EditStockModal
+        product={editTarget}
+        isPending={isStockPending}
+        onClose={() => setEditTarget(null)}
+        onSubmit={handleSubmitEdit}
       />
 
       {/* Modal Tambah Produk */}
@@ -759,7 +986,13 @@ const s = StyleSheet.create({
   colStok: { flex: 1, fontSize: 14, color: "#374151", textAlign: "center" },
   colSatuan: { flex: 1, fontSize: 14, color: "#6B7280", textAlign: "center" },
   colStatus: { flex: 1.4, alignItems: "center", justifyContent: "center" },
-  colAksi: { width: 36, alignItems: "flex-end" },
+  colAksi: {
+    width: 72,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    gap: 8,
+  },
   rowAddBtn: {
     width: 30,
     height: 30,
@@ -830,7 +1063,7 @@ const m = StyleSheet.create({
   inputError: { borderColor: "#DC2626", backgroundColor: "#FEF2F2" },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: -8 },
 
-  // Stok masuk
+  // Stok masuk / edit stok
   productCard: {
     backgroundColor: "#FEF3EC",
     borderRadius: 10,
@@ -883,6 +1116,8 @@ const m = StyleSheet.create({
     paddingVertical: 9,
   },
   previewText: { fontSize: 13, fontWeight: "600", color: "#059669" },
+  previewDown: { backgroundColor: "#FFF7ED" },
+  previewTextDown: { color: "#EA580C" },
   saveBtn: {
     backgroundColor: BRAND,
     flexDirection: "row",

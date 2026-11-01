@@ -16,7 +16,7 @@ export async function getHistory(query: BaseParams) {
   }
 
   const res = await fetch(
-    `https://baradax.online/api/cash-flow/history?${params.toString()}`,
+    `http://10.0.2.2:3000/api/cash-flow/history?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -51,7 +51,7 @@ export async function getHistoryExcel(query: BaseParams) {
   }
 
   const res = await fetchBuffer(
-    `https://baradax.online/api/cash-flow/history/excel?${params.toString()}`,
+    `http://10.0.2.2:3000/api/cash-flow/history/excel?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -76,7 +76,7 @@ export async function getHistoryExcel(query: BaseParams) {
 export async function getCabangToday() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/cabang/today`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/cabang/today`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -108,7 +108,7 @@ export async function getDashboard(query: BaseParams) {
   }
 
   const res = await fetch(
-    `https://baradax.online/api/cash-flow/dashboard?${params.toString()}`,
+    `http://10.0.2.2:3000/api/cash-flow/dashboard?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -131,7 +131,7 @@ export async function getDashboard(query: BaseParams) {
 export async function addCashFlow(payload: AddCashFlow) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -153,7 +153,7 @@ export async function addCashFlow(payload: AddCashFlow) {
 export async function approvalCashFlow(payload: AddCashFlow) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/approval`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/approval`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -176,7 +176,7 @@ export async function getAllCashFlowApi(payload: BaseParams) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `https://baradax.online/api/cash-flow?page=${payload.page}&limit=10&type=${payload.type}`,
+    `http://10.0.2.2:3000/api/cash-flow?page=${payload.page}&limit=10&type=${payload.type}`,
     {
       method: "GET",
       headers: {
@@ -198,7 +198,7 @@ export async function getAllCashFlowApi(payload: BaseParams) {
 export async function getCashFlowByIdApi(id?: string) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/${id}`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -218,7 +218,7 @@ export async function getCashFlowByIdApi(id?: string) {
 export async function getViewCashFlowApi(id?: string) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/view/${id}`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/view/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -238,7 +238,7 @@ export async function getViewCashFlowApi(id?: string) {
 export async function addReportApi(payload: AddReport) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/report`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/report`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -258,7 +258,9 @@ export async function addReportApi(payload: AddReport) {
 export async function getDetailById(id: string) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/detail/${id}`, {
+  console.log("hot");
+
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/detail/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -278,7 +280,7 @@ export async function getDetailById(id: string) {
 export async function confirmReportApi(payload: ConfirmReport) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/confirm`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/confirm`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -298,7 +300,7 @@ export async function confirmReportApi(payload: ConfirmReport) {
 export async function submitCashFlow(payload: any) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/cash-flow/submit`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/submit`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

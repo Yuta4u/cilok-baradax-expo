@@ -101,6 +101,12 @@ interface UpdateStock {
   note: string;
 }
 
+interface EditStock {
+  id: string;
+  newStock: number;
+  note: string;
+}
+
 type CashFlowDetail = {
   id: number | string;
   productId?: number | string;
@@ -169,6 +175,7 @@ interface BaseParams {
   type?: string;
   sd?: string;
   ed?: string;
+  userId?: string;
 }
 
 interface ICashFlow {
@@ -178,6 +185,7 @@ interface ICashFlow {
   out: number;
   note: string;
   overhead: number;
+  stockOverhead: number;
   verified: 0 | 1 | 2;
   user: IUser;
   cashFlowItems: ICashFlowItem[];

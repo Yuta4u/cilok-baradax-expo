@@ -8,7 +8,7 @@ export async function SignInApi({
   email: string;
   password: string;
 }): Promise<Response> {
-  const res = await fetch(`https://baradax.online/api/auth/login`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {
@@ -30,7 +30,7 @@ export async function SignInApi({
 export async function getAllUserApi() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/user/all`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/user/all`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -51,7 +51,7 @@ export async function getAllUserApi() {
 export async function addUserApi(payload: AddUser) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/user`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/user`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -76,7 +76,7 @@ export async function changePassword(payload: {
 }) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/user/change-password`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/user/change-password`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -95,11 +95,34 @@ export async function changePassword(payload: {
   return data;
 }
 
+export async function updateUser(payload: { id: string; name: string }) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(`http://10.0.2.2:3000/api/user/update`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+  console.log(res, "xxxxxxxxx1asdasdasd");
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
 export async function setActiveApi(payload: { id: string; active: number }) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `https://baradax.online/api/user/active/${payload.id}`,
+    `http://10.0.2.2:3000/api/user/active/${payload.id}`,
     {
       method: "POST",
       headers: {

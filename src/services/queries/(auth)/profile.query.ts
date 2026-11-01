@@ -12,6 +12,8 @@ export const useProfileQuery = (accessToken: string | null) => {
       });
 
       if (!res.ok) {
+        console.log("hit");
+
         throw new Error("Unauthorized");
       }
 

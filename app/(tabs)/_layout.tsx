@@ -32,6 +32,15 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="report"
+        options={{
+          tabBarIcon: ({ color, focused }) => (
+            <Ionicons name={"file-tray-sharp"} color={color} size={24} />
+          ),
+          href: authorized ? "/report" : null, // BARU: null = hilang dari tab bar
+        }}
+      />
+      <Tabs.Screen
         name="inventory"
         options={{
           tabBarIcon: ({ color, focused }) => (
@@ -64,17 +73,8 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={"home-sharp"} color={color} size={24} />
           ),
-          href: authorized ? "/user" : null, // BARU
 
           // selalu tampil untuk semua role — tidak diubah
-        }}
-      />
-      <Tabs.Screen
-        name="logout"
-        options={{
-          tabBarIcon: ({ color }) => (
-            <MaterialIcons name="logout" size={24} color={color} />
-          ),
         }}
       />
     </Tabs>

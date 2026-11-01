@@ -3,7 +3,7 @@ import { ToastError } from "../../../utils/toast";
 
 export async function getAllProductApi() {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`https://baradax.online/api/product`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/product`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -23,7 +23,7 @@ export async function getAllProductApi() {
 
 export async function getAllProductBApi() {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`https://baradax.online/api/product`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/product`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

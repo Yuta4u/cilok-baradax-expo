@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   addProduct,
+  editStockProduct,
   getProduct,
   updateStockProduct,
 } from "../../api/inventory";
@@ -29,6 +30,13 @@ export const useProductMutation = () => {
 export const useUpdateStockMutation = () => {
   return useMutation({
     mutationFn: updateStockProduct,
+    onError: handleError,
+  });
+};
+
+export const useEditStockMutation = () => {
+  return useMutation({
+    mutationFn: editStockProduct,
     onError: handleError,
   });
 };

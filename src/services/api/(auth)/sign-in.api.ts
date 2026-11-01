@@ -7,7 +7,7 @@ export async function SignInApi({
   email: string;
   password: string;
 }): Promise<Response> {
-  const res = await fetch(`https://baradax.online/api/auth/login`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {

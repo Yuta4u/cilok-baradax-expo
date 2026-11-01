@@ -13,7 +13,7 @@ export async function getProduct(
   });
 
   const res = await fetch(
-    `https://baradax.online/api/product?${params.toString()}`,
+    `http://10.0.2.2:3000/api/product?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -33,7 +33,7 @@ export async function getProduct(
 
 export async function getAllIngredientApi(q: string) {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`https://baradax.online/api/ingredient?q=${q}`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/ingredient?q=${q}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +53,7 @@ export async function getAllIngredientApi(q: string) {
 
 export async function getAllProductApi(q: string) {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`https://baradax.online/api/product?q=${q}`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/product?q=${q}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -74,7 +74,7 @@ export async function getAllProductApi(q: string) {
 export async function addProduct(payload: AddProduct) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/product`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/product`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -96,7 +96,29 @@ export async function addProduct(payload: AddProduct) {
 export async function updateStockProduct(payload: UpdateStock) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`https://baradax.online/api/product/stock`, {
+  const res = await fetch(`http://10.0.2.2:3000/api/product/stock`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    ToastError(data.message || "Something went wrong, please try again later.");
+    throw new Error(data.message);
+  }
+
+  return data;
+}
+
+export async function editStockProduct(payload: EditStock) {
+  const { accessToken } = useAuthStore.getState();
+
+  const res = await fetch(`http://10.0.2.2:3000/api/product/edit-stock`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
