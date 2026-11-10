@@ -23,6 +23,7 @@ import {
   useUpdateStockMutation,
 } from "../../src/services/queries/inventory";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ToastSuccess } from "../../src/utils/toast";
 import { deFormatRupiah2, formatRupiah2 } from "../../src/utils/format";
 
@@ -524,6 +525,7 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
 /* ─── Screen ────────────────────────────────────────────────────────────── */
 
 export default function DataStokScreen() {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -731,7 +733,7 @@ export default function DataStokScreen() {
       <StatusBar backgroundColor={BRAND} barStyle="light-content" />
 
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <View style={{ width: 36 }} />
         <Text style={s.headerTitle}>Inventory</Text>
         <TouchableOpacity
@@ -959,7 +961,6 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    paddingTop: 58,
   },
   headerBtn: {
     width: 36,

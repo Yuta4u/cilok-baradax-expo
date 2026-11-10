@@ -19,6 +19,7 @@ import {
   StockHistoryType,
 } from "../../src/services/api/stock-log";
 import { useStockHistoryQuery } from "../../src/services/queries/stock-log";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BRAND = "#B94A1C";
 
@@ -96,6 +97,7 @@ LogRow.displayName = "LogRow";
 /* ─── Screen ────────────────────────────────────────────────────────────── */
 
 export default function StockLogScreen() {
+  const insets = useSafeAreaInsets();
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebounced(search);
   const [type, setType] = useState<StockHistoryType>("all");
@@ -173,7 +175,7 @@ export default function StockLogScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar backgroundColor={BRAND} barStyle="light-content" />
 
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <View style={{ width: 36 }} />
         <Text style={s.headerTitle}>Riwayat Stok</Text>
         <View style={{ width: 36 }} />
@@ -267,7 +269,6 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    paddingTop: 69,
   },
   headerTitle: {
     color: "#fff",

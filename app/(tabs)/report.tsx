@@ -17,6 +17,7 @@ import {
   TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -239,6 +240,7 @@ ReportRow.displayName = "ReportRow";
 type PickerTarget = "from" | "to" | null;
 
 export default function SalesReportScreen() {
+  const insets = useSafeAreaInsets();
   const today = useMemo(() => new Date(), []);
   const [userId, setUserId] = useState<string | "all">("all");
   const [sd, setSd] = useState<Date>(() => {
@@ -417,7 +419,7 @@ export default function SalesReportScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar backgroundColor={BRAND} barStyle="light-content" />
 
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <View style={{ width: 36 }} />
         <Text style={s.headerTitle}>Laporan Penjualan</Text>
         <View style={{ width: 36 }} />
@@ -880,7 +882,6 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    paddingTop: 69,
   },
   headerTitle: {
     color: "#fff",
