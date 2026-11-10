@@ -619,13 +619,16 @@ const CashFlowCard = React.memo(function CashFlowCard({
     if (cashFlow.verified === 1) return "Approval";
     if (!isAdmin) return "-";
 
-    const omset = sumItems(
+    // Sisa cash = penjualan (awal - sisa) - kanal - pengeluaran.
+    const penjualan = sumItems(
       cashFlow.cashFlowItems,
-      (item) => toNumber(item.in) * getRowPrice(item),
+      (item) => toNumber(item.out) * getRowPrice(item),
     );
-    return formatRupiah(
-      omset - getExpenseTotal(cashFlow) - toNumber(cashFlow.stockOverhead),
+    const kanal = INCOME_CHANNELS.reduce(
+      (acc, c) => acc + readChannelAmount(cashFlow, c),
+      0,
     );
+    return formatRupiah(penjualan - kanal - getExpenseTotal(cashFlow));
   }, [cashFlow, isAdmin]);
 
   return (
@@ -820,8 +823,8 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
   }, [detailData]);
 
   const detailExpenseTotal = getExpenseTotal(detailData);
-  const detailStockOverhead = toNumber(detailData?.stockOverhead);
-  const detailTotalPengeluaran = detailExpenseTotal + detailStockOverhead;
+  // Stok sisa goes back to inventory, so it is NOT an expense.
+  const detailTotalPengeluaran = detailExpenseTotal;
 
   const detailChannels = useMemo(
     () =>
@@ -1227,16 +1230,16 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
         statusBarTranslucent
         onRequestClose={closeDetail}
       >
-        <Pressable
-          style={styles.backdrop}
-          onPress={closeDetail}
-          accessibilityRole="button"
-          accessibilityLabel="Tutup detail cabang"
-        >
+        <View style={styles.backdrop}>
+          {/* Tap outside the sheet closes it. Kept as a sibling (not a wrapper)
+              so it doesn't steal touches from the ScrollView inside the sheet. */}
           <Pressable
-            style={[styles.sheet, styles.sheetTall]}
-            onPress={() => {}}
-          >
+            style={StyleSheet.absoluteFill}
+            onPress={closeDetail}
+            accessibilityRole="button"
+            accessibilityLabel="Tutup detail cabang"
+          />
+          <View style={[styles.sheet, styles.sheetTall]}>
             <View style={styles.sheetHandle} />
 
             <View style={styles.sheetHeader}>
@@ -1302,7 +1305,7 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
 
                 <View style={styles.detailDivider} />
 
-                {/* Stock Sisa */}
+                {/* Stock Sisa: kembali ke inventory, bukan pengeluaran */}
                 <Text style={styles.detailSectionTitle}>Stock Sisa</Text>
                 {detailData.cashFlowItems?.map((item) => (
                   <DetailRow
@@ -1312,17 +1315,30 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
                   />
                 ))}
                 <DetailTotalRow
-                  label="Jumlah"
+                  label="Total Stok Sisa"
                   value={formatRupiah(detailTotalPriceSisa)}
                 />
 
                 <View style={styles.detailDivider} />
 
-                {/* Laporan Penjualan */}
-                <Text style={styles.detailSectionTitle}>PENDAPATAN CASH</Text>
-                <DetailRow
-                  label="Cash"
-                  value={formatRupiah(totalPenjualan - detailChannelTotal)}
+                {/* Laporan Pengeluaran (banyak item) */}
+                <Text style={styles.detailSectionTitle}>
+                  Laporan Pengeluaran
+                </Text>
+                {detailExpenses.length === 0 ? (
+                  <DetailRow label="Pengeluaran tambahan" value="-" />
+                ) : (
+                  detailExpenses.map((e, i) => (
+                    <DetailRow
+                      key={`${e.id ?? i}-${i}`}
+                      label={e.note || `Pengeluaran ${i + 1}`}
+                      value={formatRupiah(e.amount)}
+                    />
+                  ))
+                )}
+                <DetailTotalRow
+                  label="Jumlah Pengeluaran"
+                  value={formatRupiah(detailTotalPengeluaran)}
                 />
 
                 {/* Pendapatan per kanal (hanya kanal yang dipakai) */}
@@ -1346,35 +1362,17 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
                   </>
                 ) : null}
 
+                <View style={styles.detailDivider} />
+
+                {/* Pendapatan Cash (paling bawah) */}
+                <Text style={styles.detailSectionTitle}>PENDAPATAN CASH</Text>
+                <DetailRow
+                  label="Tunai"
+                  value={formatRupiah(totalPenjualan - detailChannelTotal)}
+                />
                 <DetailTotalRow
                   label="Total Penjualan"
                   value={formatRupiah(totalPenjualan)}
-                />
-
-                <View style={styles.detailDivider} />
-
-                {/* Laporan Pengeluaran (banyak item) */}
-                <Text style={styles.detailSectionTitle}>
-                  Laporan Pengeluaran
-                </Text>
-                {detailExpenses.length === 0 ? (
-                  <DetailRow label="Pengeluaran tambahan" value="-" />
-                ) : (
-                  detailExpenses.map((e, i) => (
-                    <DetailRow
-                      key={`${e.id ?? i}-${i}`}
-                      label={e.note || `Pengeluaran ${i + 1}`}
-                      value={formatRupiah(e.amount)}
-                    />
-                  ))
-                )}
-                <DetailRow
-                  label="Total Stock Sisa"
-                  value={formatRupiah(detailStockOverhead)}
-                />
-                <DetailTotalRow
-                  label="Jumlah Pengeluaran"
-                  value={formatRupiah(detailTotalPengeluaran)}
                 />
 
                 {detailData.note ? (
@@ -1385,7 +1383,9 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
                 <View style={styles.sisaCashBox}>
                   <Text style={styles.sisaCashLabel}>Sisa Cash</Text>
                   <Text style={styles.sisaCashValue}>
-                    {formatRupiah(detailTotalPrice - detailTotalPengeluaran)}
+                    {formatRupiah(
+                      totalPenjualan - detailChannelTotal - detailTotalPengeluaran,
+                    )}
                   </Text>
                 </View>
               </ScrollView>
@@ -1398,8 +1398,8 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
             >
               <Text style={styles.sheetCloseText}>Tutup</Text>
             </TouchableOpacity>
-          </Pressable>
-        </Pressable>
+          </View>
+        </View>
       </Modal>
 
       {/* ── Modal Transaksi (2 langkah: Stok Sisa -> Pendapatan) ── */}
@@ -1908,7 +1908,7 @@ const styles = StyleSheet.create({
   sheetTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
   sheetSubtitle: { fontSize: 12, color: "#9CA3AF", marginTop: 2 },
   sheetLoading: { paddingVertical: 48, alignItems: "center" },
-  sheetList: { flexGrow: 0 },
+  sheetList: { flexGrow: 0, flexShrink: 1 },
   sheetCloseBtn: {
     marginTop: 14,
     backgroundColor: ORANGE,
