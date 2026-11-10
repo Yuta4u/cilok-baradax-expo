@@ -14,6 +14,7 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  TextInput,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
@@ -52,6 +53,15 @@ const dateFormatter = new Intl.DateTimeFormat("id-ID", {
   month: "short",
   year: "numeric",
 });
+
+function useDebounced<T>(value: T, delay = 400): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 /* ─── Detail (DUMMY) ────────────────────────────────────────────────────── */
 /**
@@ -237,6 +247,8 @@ export default function SalesReportScreen() {
     return d;
   });
   const [ed, setEd] = useState<Date>(today);
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebounced(search.trim());
 
   const [picker, setPicker] = useState<PickerTarget>(null);
   const [tempDate, setTempDate] = useState<Date>(today);
@@ -255,7 +267,7 @@ export default function SalesReportScreen() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useSalesReportQuery(userId, toYMD(sd), toYMD(ed));
+  } = useSalesReportQuery(userId, toYMD(sd), toYMD(ed), debouncedSearch);
 
   const items = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
   const totalCount = data?.pages[0]?.meta?.total ?? 0;
@@ -409,6 +421,37 @@ export default function SalesReportScreen() {
         <View style={{ width: 36 }} />
         <Text style={s.headerTitle}>Laporan Penjualan</Text>
         <View style={{ width: 36 }} />
+      </View>
+
+      {/* Search */}
+      <View style={s.searchRow}>
+        <View style={s.searchBox}>
+          <Ionicons
+            name="search-outline"
+            size={18}
+            color="#9CA3AF"
+            style={{ marginRight: 8 }}
+          />
+          <TextInput
+            style={s.searchInput}
+            placeholder="Cari cabang atau catatan..."
+            placeholderTextColor="#9CA3AF"
+            value={search}
+            onChangeText={setSearch}
+            returnKeyType="search"
+            autoCorrect={false}
+          />
+          {search.length > 0 && (
+            <TouchableOpacity
+              onPress={() => setSearch("")}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              accessibilityRole="button"
+              accessibilityLabel="Hapus pencarian"
+            >
+              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Date range */}
@@ -850,10 +893,26 @@ const s = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
-    paddingTop: 14,
+    paddingTop: 4,
     paddingBottom: 8,
     gap: 10,
   },
+  searchRow: {
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 6,
+  },
+  searchBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fff",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: "#E5E7EB",
+  },
+  searchInput: { flex: 1, fontSize: 14, color: "#111827", padding: 0 },
   dateBtn: {
     flex: 1,
     flexDirection: "row",

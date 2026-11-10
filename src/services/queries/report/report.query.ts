@@ -11,14 +11,16 @@ export function useSalesReportQuery(
   userId: string | "all",
   sd: string,
   ed: string,
+  q = "",
 ) {
   return useInfiniteQuery({
-    queryKey: ["sales-report", { userId, sd, ed }],
+    queryKey: ["sales-report", { userId, sd, ed, q }],
     queryFn: ({ pageParam }) =>
       getSalesReport2({
         userId,
         sd,
         ed,
+        q,
         page: pageParam,
         limit: PAGE_LIMIT,
       }),
