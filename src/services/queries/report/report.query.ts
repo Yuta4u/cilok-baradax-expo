@@ -1,7 +1,8 @@
 // src/services/queries/sales-report.ts
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery } from "@tanstack/react-query";
 import {
   getSalesReport2,
+  getSalesReportExcel,
   getSalesReportUsers,
 } from "../../api/report/report.api";
 
@@ -36,4 +37,8 @@ export function useSalesReportUsersQuery() {
     queryFn: getSalesReportUsers,
     staleTime: 5 * 60 * 1000,
   });
+}
+
+export function useSalesReportExcelMutation() {
+  return useMutation({ mutationFn: getSalesReportExcel });
 }

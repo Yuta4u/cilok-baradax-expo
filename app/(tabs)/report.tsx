@@ -18,10 +18,14 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { File, Paths } from "expo-file-system";
+import * as Sharing from "expo-sharing";
+import { ToastError } from "../../src/utils/toast";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import {
+  useSalesReportExcelMutation,
   useSalesReportQuery,
   useSalesReportUsersQuery,
 } from "../../src/services/queries/report/report.query";
@@ -272,6 +276,46 @@ export default function SalesReportScreen() {
   } = useSalesReportQuery(userId, toYMD(sd), toYMD(ed), debouncedSearch);
 
   const items = useMemo(() => data?.pages.flatMap((p) => p.data) ?? [], [data]);
+
+  /* ── Export Excel ── */
+
+  const { mutate: exportExcel, isPending: exporting } =
+    useSalesReportExcelMutation();
+
+  const handleExport = useCallback(() => {
+    const from = toYMD(sd);
+    const to = toYMD(ed);
+    exportExcel(
+      { userId, sd: from, ed: to, q: debouncedSearch },
+      {
+        onSuccess: async (bytes) => {
+          try {
+            const file = new File(
+              Paths.cache,
+              `laporan-penjualan_${from}_${to}.xlsx`,
+            );
+            if (file.exists) file.delete();
+            file.create();
+            file.write(bytes);
+
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(file.uri, {
+                mimeType:
+                  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                dialogTitle: "Laporan Penjualan",
+                UTI: "org.openxmlformats.spreadsheetml.sheet",
+              });
+            } else {
+              ToastError("Fitur berbagi tidak tersedia di perangkat ini.");
+            }
+          } catch (error) {
+            console.error("EXPORT EXCEL ERROR:", error);
+            ToastError("Gagal menyimpan file Excel.");
+          }
+        },
+      },
+    );
+  }, [exportExcel, userId, sd, ed, debouncedSearch]);
   const totalCount = data?.pages[0]?.meta?.total ?? 0;
   const summary = data?.pages[0]?.meta?.summary;
 
@@ -422,7 +466,19 @@ export default function SalesReportScreen() {
       <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <View style={{ width: 36 }} />
         <Text style={s.headerTitle}>Laporan Penjualan</Text>
-        <View style={{ width: 36 }} />
+        <TouchableOpacity
+          style={s.headerBtn}
+          onPress={handleExport}
+          disabled={exporting}
+          accessibilityRole="button"
+          accessibilityLabel="Export laporan ke Excel"
+        >
+          {exporting ? (
+            <ActivityIndicator size="small" color="#fff" />
+          ) : (
+            <Ionicons name="download-outline" size={22} color="#fff" />
+          )}
+        </TouchableOpacity>
       </View>
 
       {/* Search */}
@@ -888,6 +944,14 @@ const s = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
     letterSpacing: 0.3,
+  },
+  headerBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(255,255,255,0.15)",
   },
 
   dateRow: {
