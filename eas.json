@@ -14,7 +14,7 @@
       },
       "channel": "base",
       "env": {
-        "EXPO_PUBLIC_API_URL": "http://103.150.191.78:3000/api"
+        "EXPO_PUBLIC_API_URL": "https://baradax.online/api"
       }
     },
     "development": {
