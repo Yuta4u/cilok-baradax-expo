@@ -29,6 +29,7 @@ import {
   useSalesReportQuery,
   useSalesReportUsersQuery,
 } from "../../src/services/queries/report/report.query";
+import { useGetDetailByIdQuery } from "../../src/services/queries/dashboard";
 import {
   SalesReportItem,
   toYMD,
@@ -68,13 +69,8 @@ function useDebounced<T>(value: T, delay = 400): T {
   return debounced;
 }
 
-/* ─── Detail (DUMMY) ────────────────────────────────────────────────────── */
-/**
- * TODO: ganti seluruh bagian "DUMMY" ini dengan API sungguhan.
- * Cukup ganti isi hook `useSalesReportDetail` di bawah dengan useQuery
- * (mis. GET /report/sales/:id) yang mengembalikan bentuk `SalesDetail`.
- * Komponen modal tidak perlu diubah.
- */
+/* ─── Detail ────────────────────────────────────────────────────────────── */
+/** Detail data comes from GET /cash-flow/detail/:id (see useSalesReportDetail). */
 
 type DetailStockRow = {
   id: number;
@@ -101,69 +97,61 @@ type SalesDetail = {
   stockOverhead: number;
 };
 
-const buildDummyDetail = (item: SalesReportItem): SalesDetail => {
-  const channels: DetailChannel[] = [
-    { label: "QRIS", amount: item.qris },
-    { label: "GoFood", amount: item.goFood },
-    { label: "GrabFood", amount: item.grabFood },
-    { label: "ShopeeFood", amount: item.shopeeFood },
-  ].filter((c) => c.amount > 0);
 
-  return {
-    id: item.id,
-    userName: item.userName,
-    createdAt: item.createdAt,
-    verified: item.verified,
-    note: item.note as never,
-    items: [
-      {
-        id: 1,
-        name: "Cilok Original",
-        price: 1000,
-        stockIn: 200,
-        stockOut: 150,
-      },
-      {
-        id: 2,
-        name: "Cilok Isi Keju",
-        price: 1500,
-        stockIn: 100,
-        stockOut: 70,
-      },
-      { id: 3, name: "Cilok Goreng", price: 2000, stockIn: 80, stockOut: 55 },
-    ],
-    cash: item.cash,
-    channels,
-    totalSales: item.totalSales,
-    expenses: [
-      { id: 1, note: "Gas", amount: 25000 },
-      { id: 2, note: "Plastik", amount: 10000 },
-      { id: 3, note: "Transport", amount: 15000 },
-    ],
-    stockOverhead: item.out,
-  };
-};
-
-/** Hook dummy: meniru loading API selama 400ms. Ganti dengan useQuery. */
+/** Real detail from GET /cash-flow/detail/:id, mapped to SalesDetail. */
 function useSalesReportDetail(item: SalesReportItem | null) {
-  const [data, setData] = useState<SalesDetail | undefined>();
-  const [isLoading, setIsLoading] = useState(false);
+  const q = useGetDetailByIdQuery(item ? String(item.id) : undefined);
 
-  useEffect(() => {
-    if (!item) {
-      setData(undefined);
-      setIsLoading(false);
-      return;
-    }
-    setIsLoading(true);
-    const t = setTimeout(() => {
-      setData(buildDummyDetail(item));
-      setIsLoading(false);
-    }, 400);
-    return () => clearTimeout(t);
-  }, [item]);
+  const data = useMemo<SalesDetail | undefined>(() => {
+    const raw = q.data as any;
+    if (!item || !raw) return undefined;
+    const n = (v: unknown) => Number(v ?? 0) || 0;
 
-  return { data, isLoading, isError: false };
+    const channels: DetailChannel[] = [
+      { label: "QRIS", amount: n(raw.qris) },
+      { label: "GoFood", amount: n(raw.goFood) },
+      { label: "GrabFood", amount: n(raw.grabFood) },
+      { label: "ShopeeFood", amount: n(raw.shopeeFood) },
+    ].filter((c) => c.amount > 0);
+
+    const overheads: any[] = Array.isArray(raw.cashFlowOverheads)
+      ? raw.cashFlowOverheads
+      : [];
+    const expenses: DetailExpense[] =
+      overheads.length > 0
+        ? overheads.map((e, i) => ({
+            id: e.id ?? i,
+            note: e.note || `Pengeluaran ${i + 1}`,
+            amount: n(e.amount),
+          }))
+        : n(raw.overhead) > 0
+          ? [{ id: 0, note: "Pengeluaran Tambahan", amount: n(raw.overhead) }]
+          : [];
+
+    const items: DetailStockRow[] = (raw.cashFlowItems ?? []).map((i: any) => ({
+      id: i.id,
+      name: i.product?.name ?? "-",
+      price: n(i.price ?? i.product?.price),
+      stockIn: n(i.in),
+      stockOut: n(i.out),
+    }));
+
+    return {
+      id: raw.id,
+      userName: raw.user?.name ?? item.userName,
+      createdAt: raw.createdAt ?? item.createdAt,
+      verified: n(raw.verified),
+      note: raw.note,
+      items,
+      cash: 0, // derived in the sheet: penjualan - kanal
+      channels,
+      totalSales: 0, // derived in the sheet
+      expenses,
+      stockOverhead: n(raw.stockOverhead),
+    };
+  }, [q.data, item]);
+
+  return { data, isLoading: q.isLoading, isError: q.isError };
 }
 
 /* ─── Row ───────────────────────────────────────────────────────────────── */
@@ -651,6 +639,9 @@ function DetailSheet({
 
   const calc = useMemo(() => {
     if (!detail) return null;
+    // Client's formula:
+    //   penjualan = stok awal - stok sisa;  tunai = penjualan - kanal
+    //   sisa cash = penjualan - kanal - pengeluaran  (stok sisa is NOT an expense)
     const totalAwal = detail.items.reduce(
       (acc, i) => acc + i.stockIn * i.price,
       0,
@@ -659,16 +650,21 @@ function DetailSheet({
       (acc, i) => acc + (i.stockIn - i.stockOut) * i.price,
       0,
     );
+    const penjualan = totalAwal - totalSisa;
     const channelTotal = detail.channels.reduce((acc, c) => acc + c.amount, 0);
-    const expenseTotal = detail.expenses.reduce((acc, e) => acc + e.amount, 0);
-    const totalPengeluaran = expenseTotal + detail.stockOverhead;
+    const totalPengeluaran = detail.expenses.reduce(
+      (acc, e) => acc + e.amount,
+      0,
+    );
 
     return {
       totalAwal,
       totalSisa,
+      penjualan,
       channelTotal,
+      cash: penjualan - channelTotal,
       totalPengeluaran,
-      sisaCash: detail.totalSales - totalPengeluaran,
+      sisaCash: penjualan - channelTotal - totalPengeluaran,
     };
   }, [detail]);
 
@@ -680,13 +676,16 @@ function DetailSheet({
       statusBarTranslucent
       onRequestClose={onClose}
     >
-      <Pressable
-        style={s.backdrop}
-        onPress={onClose}
-        accessibilityRole="button"
-        accessibilityLabel="Tutup detail"
-      >
-        <Pressable style={[s.sheet, s.sheetTall]} onPress={() => {}}>
+      <View style={s.backdrop}>
+        {/* Tap outside the sheet closes it. Kept as a sibling (not a wrapper)
+            so it doesn't steal touches from the ScrollView inside the sheet. */}
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={onClose}
+          accessibilityRole="button"
+          accessibilityLabel="Tutup detail"
+        />
+        <View style={[s.sheet, s.sheetTall]}>
           <View style={s.sheetHandle} />
 
           <View style={s.sheetHeader}>
@@ -739,25 +738,28 @@ function DetailSheet({
 
               <View style={s.detailDivider} />
 
-              {/* Stock Sisa */}
-              <Text style={s.detailSectionTitle}>Stock Sisa</Text>
-              {detail.items.map((i) => (
-                <DetailRow
-                  key={i.id}
-                  label={i.name}
-                  value={i.stockIn - i.stockOut}
-                />
-              ))}
+              {/* Pengeluaran */}
+              <Text style={s.detailSectionTitle}>Laporan Pengeluaran</Text>
+              {detail.expenses.length === 0 ? (
+                <DetailRow label="Pengeluaran tambahan" value="-" />
+              ) : (
+                detail.expenses.map((e) => (
+                  <DetailRow
+                    key={e.id}
+                    label={e.note}
+                    value={rupiah.format(e.amount)}
+                  />
+                ))
+              )}
               <DetailTotalRow
-                label="Jumlah"
+                label="Jumlah Pengeluaran"
+                value={rupiah.format(calc.totalPengeluaran)}
+              />
+              {/* Stok sisa goes back to inventory: shown for info, not an expense */}
+              <DetailRow
+                label="Total Stok Sisa"
                 value={rupiah.format(calc.totalSisa)}
               />
-
-              <View style={s.detailDivider} />
-
-              {/* Pendapatan Cash */}
-              <Text style={s.detailSectionTitle}>Pendapatan Cash</Text>
-              <DetailRow label="Cash" value={rupiah.format(detail.cash)} />
 
               {/* Pendapatan per kanal */}
               {detail.channels.length > 0 ? (
@@ -778,33 +780,14 @@ function DetailSheet({
                 </>
               ) : null}
 
-              <DetailTotalRow
-                label="Total Penjualan"
-                value={rupiah.format(detail.totalSales)}
-              />
-
               <View style={s.detailDivider} />
 
-              {/* Pengeluaran */}
-              <Text style={s.detailSectionTitle}>Laporan Pengeluaran</Text>
-              {detail.expenses.length === 0 ? (
-                <DetailRow label="Pengeluaran tambahan" value="-" />
-              ) : (
-                detail.expenses.map((e) => (
-                  <DetailRow
-                    key={e.id}
-                    label={e.note}
-                    value={rupiah.format(e.amount)}
-                  />
-                ))
-              )}
-              <DetailRow
-                label="Total Stock Sisa"
-                value={rupiah.format(detail.stockOverhead)}
-              />
+              {/* Pendapatan Cash (paling bawah) */}
+              <Text style={s.detailSectionTitle}>Pendapatan Cash</Text>
+              <DetailRow label="Tunai" value={rupiah.format(calc.cash)} />
               <DetailTotalRow
-                label="Jumlah Pengeluaran"
-                value={rupiah.format(calc.totalPengeluaran)}
+                label="Total Penjualan"
+                value={rupiah.format(calc.penjualan)}
               />
 
               {detail.note ? (
@@ -828,8 +811,8 @@ function DetailSheet({
           >
             <Text style={s.sheetCloseText}>Tutup</Text>
           </TouchableOpacity>
-        </Pressable>
-      </Pressable>
+        </View>
+      </View>
     </Modal>
   );
 }
@@ -1166,7 +1149,7 @@ const s = StyleSheet.create({
   sheetTitle: { fontSize: 16, fontWeight: "800", color: "#111827" },
   sheetDivider: { height: 1, backgroundColor: "#F3F4F6", marginBottom: 12 },
   sheetLoading: { paddingVertical: 48, alignItems: "center" },
-  sheetList: { flexGrow: 0 },
+  sheetList: { flexGrow: 0, flexShrink: 1 },
   sheetCloseBtn: {
     marginTop: 14,
     backgroundColor: BRAND,
