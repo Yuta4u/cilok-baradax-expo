@@ -1,9 +1,10 @@
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 
 export async function getAllProductApi() {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`http://10.0.2.2:3000/api/product`, {
+  const res = await fetch(`${API_URL}/product`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -23,7 +24,7 @@ export async function getAllProductApi() {
 
 export async function getAllProductBApi() {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`http://10.0.2.2:3000/api/product`, {
+  const res = await fetch(`${API_URL}/product`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",

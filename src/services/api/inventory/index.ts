@@ -1,5 +1,6 @@
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 
 // x
 export async function getProduct(
@@ -13,7 +14,7 @@ export async function getProduct(
   });
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/product?${params.toString()}`,
+    `${API_URL}/product?${params.toString()}`,
     {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -33,7 +34,7 @@ export async function getProduct(
 
 export async function getAllIngredientApi(q: string) {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`http://10.0.2.2:3000/api/ingredient?q=${q}`, {
+  const res = await fetch(`${API_URL}/ingredient?q=${q}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -53,7 +54,7 @@ export async function getAllIngredientApi(q: string) {
 
 export async function getAllProductApi(q: string) {
   const { accessToken } = useAuthStore.getState();
-  const res = await fetch(`http://10.0.2.2:3000/api/product?q=${q}`, {
+  const res = await fetch(`${API_URL}/product?q=${q}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -74,7 +75,7 @@ export async function getAllProductApi(q: string) {
 export async function addProduct(payload: AddProduct) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/product`, {
+  const res = await fetch(`${API_URL}/product`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -96,7 +97,7 @@ export async function addProduct(payload: AddProduct) {
 export async function updateStockProduct(payload: UpdateStock) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/product/stock`, {
+  const res = await fetch(`${API_URL}/product/stock`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -118,7 +119,7 @@ export async function updateStockProduct(payload: UpdateStock) {
 export async function editStockProduct(payload: EditStock) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/product/edit-stock`, {
+  const res = await fetch(`${API_URL}/product/edit-stock`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

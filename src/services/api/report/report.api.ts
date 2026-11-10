@@ -2,6 +2,7 @@
 
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -69,7 +70,7 @@ export function toYMD(d: Date) {
 export async function getSalesReportUsers(): Promise<SalesReportUser[]> {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/user/report`, {
+  const res = await fetch(`${API_URL}/user/report`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -149,7 +150,7 @@ export async function getSalesReport2(
   if (query.userId) params.set("userId", query.userId);
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/cash-flow/report?${params.toString()}`,
+    `${API_URL}/cash-flow/report?${params.toString()}`,
     {
       method: "GET",
       headers: {

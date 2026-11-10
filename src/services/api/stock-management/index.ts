@@ -1,10 +1,11 @@
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 
 export async function getCabang() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/user/cabang`, {
+  const res = await fetch(`${API_URL}/user/cabang`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -26,7 +27,7 @@ export async function updateStockCilokApi(payload: UpdateStockCilok) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/user/stock-cilok/${payload.id}`,
+    `${API_URL}/user/stock-cilok/${payload.id}`,
     {
       method: "PUT",
       headers: {
@@ -50,7 +51,7 @@ export async function updateStockCilokApi(payload: UpdateStockCilok) {
 export async function getCabangToday() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/cabang/today`, {
+  const res = await fetch(`${API_URL}/cash-flow/cabang/today`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -71,7 +72,7 @@ export async function getCabangToday() {
 export async function addCashFlow(payload: AddCashFlow) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow`, {
+  const res = await fetch(`${API_URL}/cash-flow`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -94,7 +95,7 @@ export async function getCashFlowDetail(id: string) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/cash-flow/cabang/today/detail/${id}`,
+    `${API_URL}/cash-flow/cabang/today/detail/${id}`,
     {
       method: "GET",
       headers: {
@@ -117,7 +118,7 @@ export async function getCashFlowDetail(id: string) {
 export async function updateCashFlowItem(payload: Record<string, number>) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow-item/stock`, {
+  const res = await fetch(`${API_URL}/cash-flow-item/stock`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
