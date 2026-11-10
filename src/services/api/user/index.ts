@@ -1,4 +1,5 @@
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 import { useAuthStore } from "../../../utils/authStore";
 
 export async function SignInApi({
@@ -8,7 +9,7 @@ export async function SignInApi({
   email: string;
   password: string;
 }): Promise<Response> {
-  const res = await fetch(`http://10.0.2.2:3000/api/auth/login`, {
+  const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {
@@ -30,7 +31,7 @@ export async function SignInApi({
 export async function getAllUserApi() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/user/all`, {
+  const res = await fetch(`${API_URL}/user/all`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -51,7 +52,7 @@ export async function getAllUserApi() {
 export async function addUserApi(payload: AddUser) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/user`, {
+  const res = await fetch(`${API_URL}/user`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -76,7 +77,7 @@ export async function changePassword(payload: {
 }) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/user/change-password`, {
+  const res = await fetch(`${API_URL}/user/change-password`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -98,7 +99,7 @@ export async function changePassword(payload: {
 export async function updateUser(payload: { id: string; name: string }) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/user/update`, {
+  const res = await fetch(`${API_URL}/user/update`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",
@@ -122,7 +123,7 @@ export async function setActiveApi(payload: { id: string; active: number }) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/user/active/${payload.id}`,
+    `${API_URL}/user/active/${payload.id}`,
     {
       method: "POST",
       headers: {

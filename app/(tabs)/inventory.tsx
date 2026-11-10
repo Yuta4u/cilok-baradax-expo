@@ -17,11 +17,13 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import {
+  useEditStockMutation,
   useProductMutation,
   useProductQuery,
   useUpdateStockMutation,
 } from "../../src/services/queries/inventory";
 import { useQueryClient } from "@tanstack/react-query";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ToastSuccess } from "../../src/utils/toast";
 import { deFormatRupiah2, formatRupiah2 } from "../../src/utils/format";
 
@@ -294,7 +296,11 @@ type EditStockModalProps = {
   product: Product | null;
   isPending: boolean;
   onClose: () => void;
-  onSubmit: (payload: { newStock: number; note: string }) => void;
+  onSubmit: (payload: {
+    newStock: number;
+    minimalStock: number;
+    note: string;
+  }) => void;
 };
 
 const EditStockModal: React.FC<EditStockModalProps> = ({
@@ -304,12 +310,14 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
   onSubmit,
 }) => {
   const [stock, setStock] = useState("");
+  const [minStock, setMinStock] = useState("");
   const [note, setNote] = useState("");
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (product) {
       setStock(String(product.stock ?? 0));
+      setMinStock(String(product.minimalStock ?? 0));
       setNote("");
       setError("");
     }
@@ -318,18 +326,21 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
   const currentStock = Number(product?.stock ?? 0);
   const newStock = Number(stock) || 0;
   const diff = newStock - currentStock;
+  const currentMinStock = Number(product?.minimalStock ?? 0);
+  const newMinStock = Number(minStock) || 0;
+  const minChanged = newMinStock !== currentMinStock;
 
   const handleSave = () => {
-    if (!stock.trim()) {
-      setError("Isi jumlah stok yang benar.");
+    if (!stock.trim() || !minStock.trim()) {
+      setError("Isi jumlah stok dan minimum stok yang benar.");
       return;
     }
-    if (diff === 0) {
-      setError("Stok baru sama dengan stok saat ini.");
+    if (diff === 0 && !minChanged) {
+      setError("Tidak ada perubahan.");
       return;
     }
     setError("");
-    onSubmit({ newStock, note: note.trim() });
+    onSubmit({ newStock, minimalStock: newMinStock, note: note.trim() });
   };
 
   return (
@@ -376,6 +387,9 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
               <Text style={m.productMeta}>
                 Stok saat ini: {currentStock} {product?.uom}
               </Text>
+              <Text style={m.productMeta}>
+                Minimum stok: {currentMinStock} {product?.uom}
+              </Text>
             </View>
 
             <Text style={m.label}>
@@ -418,6 +432,48 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
               </TouchableOpacity>
             </View>
             {!!error && <Text style={m.errorText}>{error}</Text>}
+
+            <Text style={m.label}>
+              Minimum Stok <Text style={{ color: BRAND }}>*</Text>
+            </Text>
+            <View style={m.qtyRow}>
+              <TouchableOpacity
+                style={m.qtyStepBtn}
+                onPress={() =>
+                  setMinStock(String(Math.max(0, newMinStock - 1)))
+                }
+                disabled={newMinStock <= 0}
+                accessibilityRole="button"
+                accessibilityLabel="Kurangi minimum stok"
+              >
+                <Ionicons
+                  name="remove"
+                  size={20}
+                  color={newMinStock <= 0 ? "#D1D5DB" : BRAND}
+                />
+              </TouchableOpacity>
+
+              <TextInput
+                style={m.qtyInput}
+                placeholder="0"
+                placeholderTextColor="#9CA3AF"
+                keyboardType="number-pad"
+                value={minStock}
+                onChangeText={(t) => setMinStock(t.replace(/[^0-9]/g, ""))}
+                selectTextOnFocus
+              />
+
+              <Text style={m.qtyUom}>{product?.uom}</Text>
+
+              <TouchableOpacity
+                style={m.qtyStepBtn}
+                onPress={() => setMinStock(String(newMinStock + 1))}
+                accessibilityRole="button"
+                accessibilityLabel="Tambah minimum stok"
+              >
+                <Ionicons name="add" size={20} color={BRAND} />
+              </TouchableOpacity>
+            </View>
 
             <Text style={m.label}>Catatan</Text>
             <TextInput
@@ -469,6 +525,7 @@ const EditStockModal: React.FC<EditStockModalProps> = ({
 /* ─── Screen ────────────────────────────────────────────────────────────── */
 
 export default function DataStokScreen() {
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -490,7 +547,7 @@ export default function DataStokScreen() {
   const { mutate: addStock, isPending: isStockPending } =
     useUpdateStockMutation();
   const { mutate: editStock, isPending: isEditStockPending } =
-    useUpdateStockMutation();
+    useEditStockMutation();
 
   // Form state
   const [name, setName] = useState("");
@@ -584,30 +641,35 @@ export default function DataStokScreen() {
   }, []);
 
   const handleSubmitEdit = useCallback(
-    ({ newStock, note }: { newStock: number; note: string }) => {
+    ({
+      newStock,
+      minimalStock,
+      note,
+    }: {
+      newStock: number;
+      minimalStock: number;
+      note: string;
+    }) => {
       if (!editTarget) return;
-
-      const diff = newStock - Number(editTarget.stock ?? 0);
-      if (diff === 0) return;
 
       editStock(
         {
           id: editTarget.id,
-          quantity: Math.abs(diff),
-          type: diff > 0 ? "inc" : "dec",
+          newStock,
+          minimalStock,
           note: note || "Koreksi stok",
         },
         {
           onSuccess: () => {
             const productName = editTarget.name;
             setEditTarget(null);
-            ToastSuccess(`Stok ${productName} diperbarui menjadi ${newStock}`);
+            ToastSuccess(`Stok ${productName} berhasil diperbarui`);
             queryClient.invalidateQueries({ queryKey: PRODUCT_QUERY_KEY });
           },
         },
       );
     },
-    [editTarget, addStock, queryClient],
+    [editTarget, editStock, queryClient],
   );
 
   const renderItem = useCallback(
@@ -671,7 +733,7 @@ export default function DataStokScreen() {
       <StatusBar backgroundColor={BRAND} barStyle="light-content" />
 
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <View style={{ width: 36 }} />
         <Text style={s.headerTitle}>Inventory</Text>
         <TouchableOpacity
@@ -772,7 +834,7 @@ export default function DataStokScreen() {
       {/* Modal Edit Stok */}
       <EditStockModal
         product={editTarget}
-        isPending={isStockPending}
+        isPending={isEditStockPending}
         onClose={() => setEditTarget(null)}
         onSubmit={handleSubmitEdit}
       />
@@ -899,7 +961,6 @@ const s = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingBottom: 14,
-    paddingTop: 58,
   },
   headerBtn: {
     width: 36,

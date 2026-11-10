@@ -103,7 +103,8 @@ interface UpdateStock {
 
 interface EditStock {
   id: string;
-  newStock: number;
+  newStock?: number;
+  minimalStock?: number;
   note: string;
 }
 

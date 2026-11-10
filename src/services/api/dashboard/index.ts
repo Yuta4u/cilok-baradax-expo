@@ -1,5 +1,6 @@
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 import { fetch as fetchBuffer } from "expo/fetch";
 
 export async function getHistory(query: BaseParams) {
@@ -16,7 +17,7 @@ export async function getHistory(query: BaseParams) {
   }
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/cash-flow/history?${params.toString()}`,
+    `${API_URL}/cash-flow/history?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -51,7 +52,7 @@ export async function getHistoryExcel(query: BaseParams) {
   }
 
   const res = await fetchBuffer(
-    `http://10.0.2.2:3000/api/cash-flow/history/excel?${params.toString()}`,
+    `${API_URL}/cash-flow/history/excel?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -76,7 +77,7 @@ export async function getHistoryExcel(query: BaseParams) {
 export async function getCabangToday() {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/cabang/today`, {
+  const res = await fetch(`${API_URL}/cash-flow/cabang/today`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -108,7 +109,7 @@ export async function getDashboard(query: BaseParams) {
   }
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/cash-flow/dashboard?${params.toString()}`,
+    `${API_URL}/cash-flow/dashboard?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -131,7 +132,7 @@ export async function getDashboard(query: BaseParams) {
 export async function addCashFlow(payload: AddCashFlow) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow`, {
+  const res = await fetch(`${API_URL}/cash-flow`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -153,7 +154,7 @@ export async function addCashFlow(payload: AddCashFlow) {
 export async function approvalCashFlow(payload: AddCashFlow) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/approval`, {
+  const res = await fetch(`${API_URL}/cash-flow/approval`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -176,7 +177,7 @@ export async function getAllCashFlowApi(payload: BaseParams) {
   const { accessToken } = useAuthStore.getState();
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/cash-flow?page=${payload.page}&limit=10&type=${payload.type}`,
+    `${API_URL}/cash-flow?page=${payload.page}&limit=10&type=${payload.type}`,
     {
       method: "GET",
       headers: {
@@ -198,7 +199,7 @@ export async function getAllCashFlowApi(payload: BaseParams) {
 export async function getCashFlowByIdApi(id?: string) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/${id}`, {
+  const res = await fetch(`${API_URL}/cash-flow/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -218,7 +219,7 @@ export async function getCashFlowByIdApi(id?: string) {
 export async function getViewCashFlowApi(id?: string) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/view/${id}`, {
+  const res = await fetch(`${API_URL}/cash-flow/view/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -238,7 +239,7 @@ export async function getViewCashFlowApi(id?: string) {
 export async function addReportApi(payload: AddReport) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/report`, {
+  const res = await fetch(`${API_URL}/cash-flow/report`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -260,7 +261,7 @@ export async function getDetailById(id: string) {
 
   console.log("hot");
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/detail/${id}`, {
+  const res = await fetch(`${API_URL}/cash-flow/detail/${id}`, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -280,7 +281,7 @@ export async function getDetailById(id: string) {
 export async function confirmReportApi(payload: ConfirmReport) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/confirm`, {
+  const res = await fetch(`${API_URL}/cash-flow/confirm`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -300,7 +301,7 @@ export async function confirmReportApi(payload: ConfirmReport) {
 export async function submitCashFlow(payload: any) {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/cash-flow/submit`, {
+  const res = await fetch(`${API_URL}/cash-flow/submit`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

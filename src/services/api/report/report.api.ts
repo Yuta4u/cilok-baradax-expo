@@ -2,6 +2,8 @@
 
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
+import { fetch as fetchBuffer } from "expo/fetch";
 
 /* ─── Types ─────────────────────────────────────────────────────────────── */
 
@@ -69,7 +71,7 @@ export function toYMD(d: Date) {
 export async function getSalesReportUsers(): Promise<SalesReportUser[]> {
   const { accessToken } = useAuthStore.getState();
 
-  const res = await fetch(`http://10.0.2.2:3000/api/user/report`, {
+  const res = await fetch(`${API_URL}/user/report`, {
     method: "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -149,7 +151,7 @@ export async function getSalesReport2(
   if (query.userId) params.set("userId", query.userId);
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/cash-flow/report?${params.toString()}`,
+    `${API_URL}/cash-flow/report?${params.toString()}`,
     {
       method: "GET",
       headers: {
@@ -170,4 +172,33 @@ export async function getSalesReport2(
   }
 
   return data as SalesReportResponse;
+}
+
+/** Download the sales report as .xlsx bytes, using the same filters as the list. */
+export async function getSalesReportExcel(query: BaseParams) {
+  const { accessToken } = useAuthStore.getState();
+
+  const params = new URLSearchParams();
+  if (query.q) params.set("q", query.q);
+  if (query.sd) params.set("sd", query.sd);
+  if (query.ed) params.set("ed", query.ed);
+  if (query.userId) params.set("userId", query.userId);
+
+  const res = await fetchBuffer(
+    `${API_URL}/cash-flow/report/excel?${params.toString()}`,
+    {
+      method: "GET",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    },
+  );
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const message =
+      data?.message || "Something went wrong, please try again later.";
+    ToastError(message);
+    throw new Error(message);
+  }
+
+  return await res.bytes();
 }

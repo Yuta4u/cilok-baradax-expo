@@ -2,6 +2,7 @@
 
 import { useAuthStore } from "../../../utils/authStore";
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 
 export type StockHistoryType = "all" | "in" | "out";
 
@@ -47,7 +48,7 @@ export async function getStockHistoryApi({
   if (search) params.set("search", search);
 
   const res = await fetch(
-    `http://10.0.2.2:3000/api/stock-histories?${params.toString()}`,
+    `${API_URL}/stock-histories?${params.toString()}`,
     {
       method: "GET",
       headers: {

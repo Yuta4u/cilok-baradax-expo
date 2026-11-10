@@ -1,4 +1,5 @@
 import { ToastError } from "../../../utils/toast";
+import { API_URL } from "../../../../constant";
 
 export async function SignInApi({
   email,
@@ -7,7 +8,7 @@ export async function SignInApi({
   email: string;
   password: string;
 }): Promise<Response> {
-  const res = await fetch(`http://10.0.2.2:3000/api/auth/login`, {
+  const res = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     body: JSON.stringify({ email, password }),
     headers: {
