@@ -738,6 +738,22 @@ function DetailSheet({
 
               <View style={s.detailDivider} />
 
+              {/* Stock Sisa: kembali ke inventory, bukan pengeluaran */}
+              <Text style={s.detailSectionTitle}>Stock Sisa</Text>
+              {detail.items.map((i) => (
+                <DetailRow
+                  key={i.id}
+                  label={i.name}
+                  value={i.stockIn - i.stockOut}
+                />
+              ))}
+              <DetailTotalRow
+                label="Total Stok Sisa"
+                value={rupiah.format(calc.totalSisa)}
+              />
+
+              <View style={s.detailDivider} />
+
               {/* Pengeluaran */}
               <Text style={s.detailSectionTitle}>Laporan Pengeluaran</Text>
               {detail.expenses.length === 0 ? (
@@ -754,11 +770,6 @@ function DetailSheet({
               <DetailTotalRow
                 label="Jumlah Pengeluaran"
                 value={rupiah.format(calc.totalPengeluaran)}
-              />
-              {/* Stok sisa goes back to inventory: shown for info, not an expense */}
-              <DetailRow
-                label="Total Stok Sisa"
-                value={rupiah.format(calc.totalSisa)}
               />
 
               {/* Pendapatan per kanal */}

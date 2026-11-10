@@ -1305,6 +1305,22 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
 
                 <View style={styles.detailDivider} />
 
+                {/* Stock Sisa: kembali ke inventory, bukan pengeluaran */}
+                <Text style={styles.detailSectionTitle}>Stock Sisa</Text>
+                {detailData.cashFlowItems?.map((item) => (
+                  <DetailRow
+                    key={item.id}
+                    label={item.product?.name ?? "-"}
+                    value={toNumber(item.in) - toNumber(item.out)}
+                  />
+                ))}
+                <DetailTotalRow
+                  label="Total Stok Sisa"
+                  value={formatRupiah(detailTotalPriceSisa)}
+                />
+
+                <View style={styles.detailDivider} />
+
                 {/* Laporan Pengeluaran (banyak item) */}
                 <Text style={styles.detailSectionTitle}>
                   Laporan Pengeluaran
@@ -1323,10 +1339,6 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
                 <DetailTotalRow
                   label="Jumlah Pengeluaran"
                   value={formatRupiah(detailTotalPengeluaran)}
-                />
-                <DetailRow
-                  label="Total Stok Sisa"
-                  value={formatRupiah(detailTotalPriceSisa)}
                 />
 
                 {/* Pendapatan per kanal (hanya kanal yang dipakai) */}
