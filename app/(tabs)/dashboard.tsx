@@ -729,15 +729,16 @@ const CashFlowCard = React.memo(function CashFlowCard({
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={[styles.cardBtn, styles.cardBtnSolid]}
+          style={[styles.cardBtn, styles.cardBtnSolid, isVerified && styles.cardBtnSolidDisabled]}
           onPress={() => onTransaksi(cashFlow)}
           activeOpacity={0.85}
-          disabled={cashFlow.verified === 0}
+          disabled={isVerified}
+          accessibilityState={{ disabled: isVerified }}
           accessibilityRole="button"
           accessibilityLabel={`Transaksi ${cashFlow?.user?.name ?? ""}`}
         >
-          <Ionicons name="receipt-outline" size={15} color="#fff" />
-          <Text style={styles.cardBtnSolidText}>Transaksi</Text>
+          <Ionicons name="receipt-outline" size={15} color={isVerified ? "#6B7280" : "#fff"} />
+          <Text style={[styles.cardBtnSolidText, isVerified && styles.cardBtnSolidDisabledText]}>Transaksi</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -873,6 +874,8 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
   const canEditTrx = transaksiCashFlow?.verified === 2 || isAdmin;
 
   const openTransaksi = useCallback((cashFlow: CashFlow) => {
+    if (isVerifiedFlow(cashFlow)) return;
+
     const seed = cashFlow.cashFlowItems.reduce<Record<string, string>>(
       (acc, item) => {
         acc[item.id] = getSisaSeed(item);
@@ -1874,6 +1877,8 @@ const styles = StyleSheet.create({
   cardBtnGhostText: { color: ORANGE, fontSize: 12, fontWeight: "700" },
   cardBtnSolid: { backgroundColor: ORANGE },
   cardBtnSolidText: { color: "#fff", fontSize: 12, fontWeight: "700" },
+  cardBtnSolidDisabled: { backgroundColor: "#E5E7EB" },
+  cardBtnSolidDisabledText: { color: "#6B7280" },
   btnDisabled: { opacity: 0.5 },
 
   // SHEETS
