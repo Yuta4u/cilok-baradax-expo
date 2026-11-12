@@ -712,7 +712,7 @@ const CashFlowCard = React.memo(function CashFlowCard({
           style={[
             styles.cardBtn,
             styles.cardBtnGhost,
-            !canDetail && styles.btnDisabled,
+            !canDetail && styles.cardBtnGhostDisabled,
           ]}
           onPress={() => onDetail(cashFlow)}
           activeOpacity={0.85}
@@ -721,8 +721,8 @@ const CashFlowCard = React.memo(function CashFlowCard({
           accessibilityState={{ disabled: !canDetail }}
           disabled={!canDetail}
         >
-          <Ionicons name="newspaper-outline" size={15} color={ORANGE} />
-          <Text style={styles.cardBtnGhostText}>Detail</Text>
+          <Ionicons name="newspaper-outline" size={15} color={canDetail ? ORANGE : "#6B7280"} />
+          <Text style={[styles.cardBtnGhostText, !canDetail && styles.cardBtnSolidDisabledText]}>Detail</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -1936,6 +1936,8 @@ const styles = StyleSheet.create({
   cardBtnSolidText: { color: "#fff", fontSize: 12, fontWeight: "700" },
   cardBtnSolidDisabled: { backgroundColor: "#E5E7EB" },
   cardBtnSolidDisabledText: { color: "#6B7280" },
+  // Same gray as disabled Transaksi; border matches so the shape stays aligned.
+  cardBtnGhostDisabled: { backgroundColor: "#E5E7EB", borderColor: "#E5E7EB" },
   btnDisabled: { opacity: 0.5 },
 
   // SHEETS
