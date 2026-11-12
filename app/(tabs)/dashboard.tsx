@@ -617,7 +617,10 @@ const CashFlowCard = React.memo(function CashFlowCard({
   onTransaksi,
 }: CashFlowCardProps) {
   const isVerified = isVerifiedFlow(cashFlow);
-  const canDetail = isSubmittedFlow(cashFlow);
+  // Admin: detail once submitted. Cabang: only while waiting approval.
+  const canDetail = isAdmin
+    ? isSubmittedFlow(cashFlow)
+    : cashFlow?.verified === 1;
 
   const omsetLabel = useMemo(() => {
     if (cashFlow.verified === 2) return "Submit First";
@@ -792,13 +795,20 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
   const isRefetching = isCabang ? refetchingCabang : refetchingToday;
   const refetch = isCabang ? refetchCabang : refetchToday;
 
-  const openDetail = useCallback((cashFlow: CashFlow) => {
-    if (!isSubmittedFlow(cashFlow)) {
-      ToastError("Laporan belum disubmit");
-      return;
-    }
-    setSelectedCabang(cashFlow);
-  }, []);
+  const openDetail = useCallback(
+    (cashFlow: CashFlow) => {
+      if (!isSubmittedFlow(cashFlow)) {
+        ToastError("Laporan belum disubmit");
+        return;
+      }
+      if (!isAdmin && isVerifiedFlow(cashFlow)) {
+        ToastError("Laporan sudah diverifikasi");
+        return;
+      }
+      setSelectedCabang(cashFlow);
+    },
+    [isAdmin],
+  );
 
   const closeDetail = useCallback(() => setSelectedCabang(null), []);
 
