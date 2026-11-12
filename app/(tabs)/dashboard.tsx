@@ -268,6 +268,10 @@ const sumItems = (
 const isVerifiedFlow = (cashFlow?: { verified?: number } | null): boolean =>
   cashFlow?.verified === 0;
 
+/** Sudah disubmit cabang (menunggu approval atau sudah diverifikasi). */
+const isSubmittedFlow = (cashFlow?: { verified?: number } | null): boolean =>
+  cashFlow?.verified === 0 || cashFlow?.verified === 1;
+
 type StockRowProps = {
   id: RowId;
   name: string;
@@ -613,11 +617,11 @@ const CashFlowCard = React.memo(function CashFlowCard({
   onTransaksi,
 }: CashFlowCardProps) {
   const isVerified = isVerifiedFlow(cashFlow);
+  const canDetail = isSubmittedFlow(cashFlow);
 
   const omsetLabel = useMemo(() => {
     if (cashFlow.verified === 2) return "Submit First";
     if (cashFlow.verified === 1) return "Approval";
-    if (!isAdmin) return "-";
 
     // Sisa cash = penjualan (awal - sisa) - kanal - pengeluaran.
     const penjualan = sumItems(
@@ -629,7 +633,7 @@ const CashFlowCard = React.memo(function CashFlowCard({
       0,
     );
     return formatRupiah(penjualan - kanal - getExpenseTotal(cashFlow));
-  }, [cashFlow, isAdmin]);
+  }, [cashFlow]);
 
   return (
     <View style={styles.cabangCard}>
@@ -655,7 +659,7 @@ const CashFlowCard = React.memo(function CashFlowCard({
           <Text
             style={[styles.statusText, { color: isVerified ? GREEN : RED }]}
           >
-            {isVerified ? "Aktif" : "Belum diverifikasi"}
+            {isVerified ? "Sudah diverifikasi" : "Belum diverifikasi"}
           </Text>
         </View>
       </View>
@@ -705,13 +709,14 @@ const CashFlowCard = React.memo(function CashFlowCard({
           style={[
             styles.cardBtn,
             styles.cardBtnGhost,
-            !isAdmin && styles.btnDisabled,
+            !canDetail && styles.btnDisabled,
           ]}
           onPress={() => onDetail(cashFlow)}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel={`Detail ${cashFlow?.user?.name ?? ""}`}
-          disabled={!isAdmin}
+          accessibilityState={{ disabled: !canDetail }}
+          disabled={!canDetail}
         >
           <Ionicons name="newspaper-outline" size={15} color={ORANGE} />
           <Text style={styles.cardBtnGhostText}>Detail</Text>
@@ -780,8 +785,8 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
     useCabangTodayQuery(isAdmin);
 
   const openDetail = useCallback((cashFlow: CashFlow) => {
-    if (!isVerifiedFlow(cashFlow)) {
-      ToastError("Laporan belum diverifikasi");
+    if (!isSubmittedFlow(cashFlow)) {
+      ToastError("Laporan belum disubmit");
       return;
     }
     setSelectedCabang(cashFlow);
@@ -850,6 +855,15 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
     [],
   );
   const closeStok = useCallback(() => setStokToday(null), []);
+  const stokTotalQty = useMemo(
+    () => sumItems(stokToday?.cashFlowItems, (i) => toNumber(i.in)),
+    [stokToday],
+  );
+  const stokTotalRp = useMemo(
+    () =>
+      sumItems(stokToday?.cashFlowItems, (i) => toNumber(i.in) * getRowPrice(i)),
+    [stokToday],
+  );
 
   /* -------------------- Transaksi (2 langkah) -------------------- */
 
@@ -1113,18 +1127,26 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
   );
 
   const renderStockItem = useCallback(
-    ({ item }: { item: ICashFlowItem }) => (
-      <View style={styles.stockRow}>
-        <View style={styles.flex}>
-          <Text style={styles.stockName} numberOfLines={2}>
-            {item.product?.name ?? ""}
-          </Text>
+    ({ item }: { item: ICashFlowItem }) => {
+      const price = getRowPrice(item);
+      return (
+        <View style={styles.stockRow}>
+          <View style={styles.flex}>
+            <Text style={styles.stockName} numberOfLines={2}>
+              {item.product?.name ?? ""}
+            </Text>
+            {price > 0 ? (
+              <Text style={styles.stockPrice} numberOfLines={1}>
+                {formatRupiah(price)}  ·  {formatRupiah(toNumber(item.in) * price)}
+              </Text>
+            ) : null}
+          </View>
+          <View style={styles.qtyBadge}>
+            <Text style={styles.qtyBadgeText}>{formatCount(item.in)}</Text>
+          </View>
         </View>
-        <View style={styles.qtyBadge}>
-          <Text style={styles.qtyBadgeText}>{item.in}</Text>
-        </View>
-      </View>
-    ),
+      );
+    },
     [],
   );
 
@@ -1678,6 +1700,23 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
             }
             renderItem={renderStockItem}
           />
+
+          {(stokToday?.cashFlowItems?.length ?? 0) > 0 ? (
+            <View style={styles.stokFooter}>
+              <View style={styles.stokFooterRow}>
+                <Text style={styles.stokFooterLabel}>Total stok</Text>
+                <Text style={styles.stokFooterQty}>
+                  {formatThousand(formatCount(stokTotalQty))} pcs
+                </Text>
+              </View>
+              <View style={styles.stokFooterRow}>
+                <Text style={styles.stokFooterLabel}>Total nilai stok</Text>
+                <Text style={styles.stokFooterRp}>
+                  {formatRupiah(stokTotalRp)}
+                </Text>
+              </View>
+            </View>
+          ) : null}
         </SafeAreaView>
       </Modal>
     </View>
@@ -2185,6 +2224,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   qtyBadgeText: { color: ORANGE, fontWeight: "800", fontSize: 13 },
+  stokFooter: {
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    gap: 6,
+    borderTopWidth: 1,
+    borderTopColor: "#F1F5F9",
+    backgroundColor: "#fff",
+  },
+  stokFooterRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  stokFooterLabel: { color: "#6B7280", fontSize: 13 },
+  stokFooterQty: { fontWeight: "800", color: "#111827", fontSize: 15 },
+  stokFooterRp: { fontWeight: "800", color: GREEN, fontSize: 15 },
 
   emptyBox: { alignItems: "center", paddingVertical: 48, gap: 6 },
   emptyTitle: { fontWeight: "700", color: "#374151" },

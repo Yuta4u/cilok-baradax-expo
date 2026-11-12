@@ -1024,7 +1024,7 @@ const s = StyleSheet.create({
     gap: 4,
   },
   summaryLabel: { fontSize: 12, color: "#6B7280" },
-  summaryTotal: { fontSize: 24, fontWeight: "800", color: BRAND },
+  summaryTotal: { fontSize: 24, fontWeight: "800", color: GREEN },
   summaryGrid: { flexDirection: "row", gap: 8, marginTop: 8 },
   summaryCell: {
     flex: 1,
