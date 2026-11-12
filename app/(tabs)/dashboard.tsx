@@ -1294,7 +1294,7 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
                     { color: detailVerified ? GREEN : RED },
                   ]}
                 >
-                  {detailVerified ? "Aktif" : "Belum diverifikasi"}
+                  {detailVerified ? "Sudah diverifikasi" : "Belum diverifikasi"}
                 </Text>
               </View>
             </View>
