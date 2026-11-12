@@ -1153,7 +1153,7 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
             <Text style={styles.stockName} numberOfLines={2}>
               {item.product?.name ?? ""}
             </Text>
-            {price > 0 ? (
+            {price > 0 && isAdmin ? (
               <Text style={styles.stockPrice} numberOfLines={1}>
                 {formatRupiah(price)}  ·  {formatRupiah(toNumber(item.in) * price)}
               </Text>
@@ -1165,7 +1165,7 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
         </View>
       );
     },
-    [],
+    [isAdmin],
   );
 
   const renderTrxItem = useCallback(
@@ -1719,7 +1719,7 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
             renderItem={renderStockItem}
           />
 
-          {(stokToday?.cashFlowItems?.length ?? 0) > 0 ? (
+          {isAdmin && (stokToday?.cashFlowItems?.length ?? 0) > 0 ? (
             <View style={styles.stokFooter}>
               <View style={styles.stokFooterRow}>
                 <Text style={styles.stokFooterLabel}>Total stok</Text>
