@@ -777,12 +777,20 @@ export default function DashboardScreen({ navigation: _navigation }: Props) {
   const {
     data: cabangData,
     isLoading: loadingCabang,
-    isRefetching,
-    refetch,
+    isRefetching: refetchingCabang,
+    refetch: refetchCabang,
   } = useCabangHistoryQuery(isCabang, dateRange as never);
 
-  const { data: cabangTodayData, isLoading: loadingCabangToday } =
-    useCabangTodayQuery(isAdmin);
+  const {
+    data: cabangTodayData,
+    isLoading: loadingCabangToday,
+    isRefetching: refetchingToday,
+    refetch: refetchToday,
+  } = useCabangTodayQuery(isAdmin);
+
+  // Pull-to-refresh must reload the list this role actually sees.
+  const isRefetching = isCabang ? refetchingCabang : refetchingToday;
+  const refetch = isCabang ? refetchCabang : refetchToday;
 
   const openDetail = useCallback((cashFlow: CashFlow) => {
     if (!isSubmittedFlow(cashFlow)) {
